@@ -1,0 +1,1619 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === Google 字型引入 === */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700;900&family=Noto+Serif+TC:wght@400;500;600;700;900&display=swap');
+
+/* ========================================
+   荷顏品牌視覺統一系統 + 中文排版 + 手機優化
+   ======================================== */
+
+:root {
+  /* === 荷顏品牌色彩系統 === */
+  --heyan-gold: #D9AC39;           /* 荷顏金 - 品牌主色 */
+  --heyan-gold-light: #E8C266;     /* 淺荷顏金 */
+  --heyan-gold-dark: #B8921F;      /* 深荷顏金 */
+  
+  --heyan-green: #4A7C59;          /* 荷葉綠 - 品牌輔色 */
+  --heyan-green-light: #6B9B7A;    /* 淺荷葉綠 */
+  --heyan-green-dark: #2E5A3B;     /* 深荷葉綠 */
+  
+  --heyan-pink: #E8B4CB;           /* 荷花粉 - 點綴色 */
+  --heyan-pink-light: #F0C9D9;     /* 淺荷花粉 */
+  --heyan-pink-dark: #D196B5;      /* 深荷花粉 */
+  
+  /* === 中性色彩 === */
+  --neutral-white: #FFFFFF;        /* 純白 */
+  --neutral-warm: #F8F6F0;         /* 溫暖白 - 背景色 */
+  --neutral-cream: #F5F2E8;        /* 奶油色 */
+  --neutral-light: #F0EDE5;        /* 淺灰暖 */
+  --neutral-medium: #D4CFC4;       /* 中灰暖 */
+  
+  /* === 文字色彩 === */
+  --text-primary: #2C3E50;         /* 主文字 - 深灰藍 */
+  --text-secondary: #5D6D7E;       /* 次要文字 - 中灰 */
+  --text-muted: #85929E;           /* 淡化文字 - 淺灰 */
+  --text-white: #FFFFFF;           /* 白色文字 */
+  
+  /* === 功能色彩 === */
+  --success: #27AE60;              /* 成功/安全 */
+  --warning: #F39C12;              /* 警告 */
+  --error: #E74C3C;               /* 錯誤 */
+  --info: #3498DB;                /* 資訊 */
+  
+  /* === 陰影系統 === */
+  --shadow-sm: 0 2px 8px rgba(45, 62, 80, 0.1);
+  --shadow-md: 0 4px 16px rgba(45, 62, 80, 0.12);
+  --shadow-lg: 0 8px 32px rgba(45, 62, 80, 0.15);
+  --shadow-xl: 0 16px 48px rgba(45, 62, 80, 0.18);
+  
+  /* === 邊框圓角 === */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  
+  /* === 中文排版專用變數 === */
+  --font-sans-tc: 'Noto Sans TC', 'Taipei Sans TC', 'PingFang TC', 'Hiragino Sans GB', 'Microsoft JhengHei', 'Source Han Sans TC', sans-serif;
+  --font-serif-tc: 'Noto Serif TC', 'Taipei Sans TC', 'PingFang TC', 'Hiragino Mincho ProN', 'Microsoft JhengHei','Taipei Sans TC', 'PingFang TC', 'Hiragino Mincho ProN', 'Microsoft JhengHei', serif;
+  
+  /* === 字型大小系統 === */
+  --text-xs: 0.75rem;      /* 12px */
+  --text-sm: 0.875rem;     /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 1.875rem;    /* 30px */
+  --text-4xl: 2.25rem;     /* 36px */
+  --text-5xl: 3rem;        /* 48px */
+  --text-6xl: 3.75rem;     /* 60px */
+  
+  /* === 行間距系統 === */
+  --leading-tight: 1.4;    /* 緊密 - 標題用 */
+  --leading-normal: 1.6;   /* 標準 - 短段落 */
+  --leading-relaxed: 1.7;  /* 舒適 - 長段落 */
+  --leading-loose: 1.8;    /* 寬鬆 - 特殊用途 */
+  
+  /* === 字距系統 === */
+  --tracking-tighter: -0.02em;
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.02em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+  
+  /* === 字重系統 === */
+  --font-light: 300;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-black: 900;
+  
+  /* === 手機專用變數 === */
+  --mobile-space-xs: 0.5rem;    /* 8px */
+  --mobile-space-sm: 0.75rem;   /* 12px */
+  --mobile-space-md: 1rem;      /* 16px */
+  --mobile-space-lg: 1.5rem;    /* 24px */
+  --mobile-space-xl: 2rem;      /* 32px */
+  --mobile-space-2xl: 2.5rem;   /* 40px */
+  --mobile-space-3xl: 3rem;     /* 48px */
+  
+  --touch-target-min: 44px;     /* 最小觸控目標 */
+  --touch-target-comfortable: 48px;
+  --touch-target-large: 56px;
+  
+  --mobile-container: 100%;
+  --mobile-padding: 1rem;
+  --mobile-padding-sm: 0.75rem;
+  --mobile-card-gap: 1rem;
+  --mobile-card-padding: 1rem;
+  --mobile-card-radius: 12px;
+  
+  /* === 保留舊版變數以維持相容性 === */
+  --primary-color: var(--heyan-green);
+  --secondary-color: var(--heyan-green-dark);
+}
+
+/* ========================================
+   全域樣式設定
+   ======================================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans-tc);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  letter-spacing: var(--tracking-normal);
+  font-weight: var(--font-normal);
+  color: var(--text-primary);
+  background-color: var(--neutral-white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif-tc);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-primary);
+  margin-bottom: 0.5em;
+}
+
+p {
+  margin-bottom: 1em;
+  line-height: var(--leading-relaxed);
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+strong, b {
+  font-weight: var(--font-semibold);
+  color: var(--heyan-gold);
+}
+
+em, i {
+  font-style: normal;
+  color: var(--heyan-green);
+  font-weight: var(--font-medium);
+}
+
+blockquote {
+  border-left: 4px solid var(--heyan-gold);
+  padding-left: 1rem;
+  margin: 1.5rem 0;
+  font-style: normal;
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+}
+
+ul, ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+  line-height: var(--leading-relaxed);
+}
+
+li {
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+li:last-child {
+  margin-bottom: 0;
+}
+
+/* ========================================
+   字型大小與層級系統
+   ======================================== */
+
+.text-hero {
+  font-size: var(--text-6xl);
+  font-weight: var(--font-black);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wider);
+}
+
+.text-h1 {
+  font-size: var(--text-5xl);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+}
+
+.text-h2 {
+  font-size: var(--text-4xl);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+}
+
+.text-h3 {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-normal);
+}
+
+.text-h4 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-normal);
+}
+
+.text-h5 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-normal);
+}
+
+.text-h6 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-normal);
+}
+
+.text-body-xl {
+  font-size: var(--text-xl);
+  line-height: var(--leading-relaxed);
+  letter-spacing: var(--tracking-normal);
+  font-weight: var(--font-normal);
+}
+
+.text-body-lg {
+  font-size: var(--text-lg);
+  line-height: var(--leading-relaxed);
+  letter-spacing: var(--tracking-normal);
+  font-weight: var(--font-normal);
+}
+
+.text-body {
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  letter-spacing: var(--tracking-normal);
+  font-weight: var(--font-normal);
+}
+
+.text-body-sm {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-normal);
+  font-weight: var(--font-normal);
+}
+
+.text-caption {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-normal);
+  font-weight: var(--font-normal);
+  color: var(--text-secondary);
+}
+
+.text-footnote {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-normal);
+  font-weight: var(--font-normal);
+  color: var(--text-muted);
+}
+
+/* === 字重變化 === */
+.font-light { font-weight: var(--font-light); }
+.font-normal { font-weight: var(--font-normal); }
+.font-medium { font-weight: var(--font-medium); }
+.font-semibold { font-weight: var(--font-semibold); }
+.font-bold { font-weight: var(--font-bold); }
+.font-black { font-weight: var(--font-black); }
+
+/* === 字距調整 === */
+.tracking-tighter { letter-spacing: var(--tracking-tighter); }
+.tracking-tight { letter-spacing: var(--tracking-tight); }
+.tracking-normal { letter-spacing: var(--tracking-normal); }
+.tracking-wide { letter-spacing: var(--tracking-wide); }
+.tracking-wider { letter-spacing: var(--tracking-wider); }
+.tracking-widest { letter-spacing: var(--tracking-widest); }
+
+/* === 行間距調整 === */
+.leading-tight { line-height: var(--leading-tight); }
+.leading-normal { line-height: var(--leading-normal); }
+.leading-relaxed { line-height: var(--leading-relaxed); }
+.leading-loose { line-height: var(--leading-loose); }
+
+/* === 字型家族切換 === */
+.font-sans { font-family: var(--font-sans-tc); }
+.font-serif { font-family: var(--font-serif-tc); }
+
+/* ========================================
+   品牌文字樣式
+   ======================================== */
+
+.brand-title {
+  font-family: var(--font-serif-tc);
+  font-size: var(--text-5xl);
+  font-weight: var(--font-black);
+  color: var(--heyan-gold);
+  letter-spacing: var(--tracking-widest);
+  line-height: var(--leading-tight);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.brand-subtitle {
+  font-family: var(--font-sans-tc);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-medium);
+  color: var(--heyan-green);
+  letter-spacing: var(--tracking-wide);
+  line-height: var(--leading-normal);
+}
+
+.brand-tagline {
+  font-family: var(--font-serif-tc);
+  font-size: var(--text-xl);
+  font-weight: var(--font-normal);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--leading-relaxed);
+}
+
+.product-name {
+  font-family: var(--font-serif-tc);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--heyan-green);
+  letter-spacing: var(--tracking-wide);
+  line-height: var(--leading-tight);
+}
+
+.product-description {
+  font-family: var(--font-sans-tc);
+  font-size: var(--text-lg);
+  font-weight: var(--font-normal);
+  color: var(--text-secondary);
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--leading-relaxed);
+}
+
+.number-label {
+  font-family: var(--font-sans-tc);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--heyan-gold);
+  letter-spacing: var(--tracking-normal);
+}
+
+.feature-title {
+  font-family: var(--font-serif-tc);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-wide);
+  line-height: var(--leading-tight);
+  margin-bottom: 0.5rem;
+}
+
+.description-text {
+  font-family: var(--font-sans-tc);
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  color: var(--text-secondary);
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--leading-relaxed);
+}
+
+.highlight-text {
+  font-family: var(--font-sans-tc);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--heyan-gold);
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--leading-normal);
+  background: linear-gradient(135deg, 
+    rgba(217, 172, 57, 0.1) 0%, 
+    rgba(217, 172, 57, 0.05) 100%);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  display: inline;
+}
+
+/* ========================================
+   品牌色彩應用類別
+   ======================================== */
+
+/* === 背景色彩 === */
+.bg-heyan-gold { background-color: var(--heyan-gold); }
+.bg-heyan-gold-light { background-color: var(--heyan-gold-light); }
+.bg-heyan-gold-dark { background-color: var(--heyan-gold-dark); }
+.bg-heyan-green { background-color: var(--heyan-green); }
+.bg-heyan-green-light { background-color: var(--heyan-green-light); }
+.bg-heyan-green-dark { background-color: var(--heyan-green-dark); }
+.bg-heyan-pink { background-color: var(--heyan-pink); }
+.bg-heyan-pink-light { background-color: var(--heyan-pink-light); }
+.bg-heyan-pink-dark { background-color: var(--heyan-pink-dark); }
+.bg-neutral-white { background-color: var(--neutral-white); }
+.bg-neutral-warm { background-color: var(--neutral-warm); }
+.bg-neutral-cream { background-color: var(--neutral-cream); }
+.bg-neutral-light { background-color: var(--neutral-light); }
+.bg-neutral-medium { background-color: var(--neutral-medium); }
+
+/* === 文字色彩 === */
+.text-heyan-gold { color: var(--heyan-gold); }
+.text-heyan-green { color: var(--heyan-green); }
+.text-heyan-pink { color: var(--heyan-pink); }
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+
+/* === 漸層背景 === */
+.bg-brand-primary {
+  background: linear-gradient(135deg, var(--heyan-gold) 0%, var(--heyan-gold-light) 100%);
+}
+
+.bg-brand-secondary {
+  background: linear-gradient(135deg, var(--heyan-green) 0%, var(--heyan-green-light) 100%);
+}
+
+.bg-brand-accent {
+  background: linear-gradient(135deg, var(--heyan-pink-light) 0%, var(--heyan-pink) 100%);
+}
+
+.bg-brand-subtle {
+  background: linear-gradient(135deg, var(--neutral-warm) 0%, var(--neutral-cream) 100%);
+}
+
+/* === 邊框色彩 === */
+.border-heyan-gold { border-color: var(--heyan-gold); }
+.border-heyan-green { border-color: var(--heyan-green); }
+.border-heyan-pink { border-color: var(--heyan-pink); }
+.border-error { border-color: var(--error); }
+
+/* ========================================
+   品牌按鈕系統
+   ======================================== */
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--heyan-gold) 0%, var(--heyan-gold-light) 100%);
+  color: var(--text-white);
+  border: 2px solid var(--heyan-gold);
+  padding: 12px 24px;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-sans-tc);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
+  letter-spacing: var(--tracking-normal);
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--heyan-gold-dark) 0%, var(--heyan-gold) 100%);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, var(--heyan-green) 0%, var(--heyan-green-light) 100%);
+  color: var(--text-white);
+  border: 2px solid var(--heyan-green);
+  padding: 12px 24px;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-sans-tc);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
+  letter-spacing: var(--tracking-normal);
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-secondary:hover {
+  background: linear-gradient(135deg, var(--heyan-green-dark) 0%, var(--heyan-green) 100%);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--heyan-gold);
+  border: 2px solid var(--heyan-gold);
+  padding: 12px 24px;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-sans-tc);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
+  letter-spacing: var(--tracking-normal);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-outline:hover {
+  background: var(--heyan-gold);
+  color: var(--text-white);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* === 保留舊版按鈕樣式 === */
+.btn-hover:hover {
+  transform: translateY(-1px);
+  transition: transform 0.2s ease;
+}
+
+/* ========================================
+   品牌卡片系統
+   ======================================== */
+
+.card-brand {
+  background: var(--neutral-white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--neutral-light);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.card-brand:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+}
+
+.card-brand-header {
+  background: linear-gradient(135deg, var(--heyan-gold) 0%, var(--heyan-gold-light) 100%);
+  color: var(--text-white);
+  padding: 16px 24px;
+  font-family: var(--font-serif-tc);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-lg);
+  letter-spacing: var(--tracking-wide);
+}
+
+/* === 保留舊版卡片樣式 === */
+.card-hover:hover {
+  transform: translateY(-5px);
+  transition: transform 0.3s ease;
+}
+
+/* ========================================
+   品牌裝飾元素
+   ======================================== */
+
+.divider-brand {
+  width: 80px;
+  height: 4px;
+  background: linear-gradient(90deg, var(--heyan-gold) 0%, var(--heyan-green) 100%);
+  border-radius: var(--radius-full);
+  margin: 16px auto;
+}
+
+.accent-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--heyan-gold);
+  border-radius: var(--radius-full);
+  display: inline-block;
+  margin: 0 8px;
+}
+
+.feature-highlight {
+  background: linear-gradient(135deg, 
+    rgba(217, 172, 57, 0.1) 0%, 
+    rgba(74, 124, 89, 0.1) 100%);
+  border: 2px solid var(--heyan-gold);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  position: relative;
+}
+
+.feature-highlight::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(135deg, var(--heyan-gold), var(--heyan-green));
+  border-radius: var(--radius-xl);
+  z-index: -1;
+}
+
+/* ========================================
+   狀態指示器
+   ======================================== */
+
+.status-available {
+  background: var(--success);
+  color: var(--text-white);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans-tc);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  letter-spacing: var(--tracking-normal);
+}
+
+.status-coming {
+  background: var(--heyan-gold);
+  color: var(--text-white);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans-tc);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  letter-spacing: var(--tracking-normal);
+}
+
+.status-development {
+  background: var(--text-muted);
+  color: var(--text-white);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans-tc);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  letter-spacing: var(--tracking-normal);
+}
+
+/* ========================================
+   保留的舊版動畫效果
+   ======================================== */
+
+.fade-enter {
+  opacity: 0;
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity 300ms ease-in;
+}
+
+.fade-exit {
+  opacity: 1;
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity 300ms ease-in;
+}
+
+.form-input:focus {
+  box-shadow: 0 0 0 3px rgba(217, 172, 57, 0.2);
+}
+
+.nav-shadow {
+  box-shadow: var(--shadow-md);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes float-delayed {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 4s ease-in-out infinite 1s;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.8s ease-out forwards;
+}
+
+.shadow-3xl {
+  box-shadow: var(--shadow-xl);
+}
+
+/* ========================================
+   手機優化系統
+   ======================================== */
+
+/* 手機觸控優化 */
+.touch-target {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.touch-target-comfortable {
+  min-height: var(--touch-target-comfortable);
+  min-width: var(--touch-target-comfortable);
+}
+
+.touch-target-large {
+  min-height: var(--touch-target-large);
+  min-width: var(--touch-target-large);
+}
+
+/* 手機基礎佈局 */
+@media (max-width: 768px) {
+  .container {
+    max-width: 100%;
+    padding-left: var(--mobile-padding);
+    padding-right: var(--mobile-padding);
+  }
+  
+  .container-sm {
+    padding-left: var(--mobile-padding-sm);
+    padding-right: var(--mobile-padding-sm);
+  }
+  
+  .container-full {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* 手機導航系統 */
+@media (max-width: 768px) {
+  .mobile-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--neutral-light);
+  }
+  
+  .mobile-nav-content {
+    padding: var(--mobile-space-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--mobile-space-sm);
+  }
+  
+  .mobile-brand-logo {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .mobile-brand-text {
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    color: var(--heyan-gold);
+  }
+  
+  .mobile-menu-button {
+    width: var(--touch-target-min);
+    height: var(--touch-target-min);
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .mobile-menu-button:hover {
+    background-color: var(--neutral-light);
+  }
+  
+  .mobile-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-bottom: 1px solid var(--neutral-light);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .mobile-dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: var(--mobile-space-lg) var(--mobile-space-md);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    border-bottom: 1px solid var(--neutral-light);
+    transition: all 0.2s ease;
+    min-height: var(--touch-target-min);
+  }
+  
+  .mobile-dropdown-item:hover {
+    background-color: var(--neutral-light);
+    color: var(--heyan-gold);
+  }
+  
+  .mobile-dropdown-item:last-child {
+    border-bottom: none;
+  }
+}
+
+/* 手機卡片系統 */
+@media (max-width: 768px) {
+  .mobile-card {
+    background: var(--neutral-white);
+    border-radius: var(--mobile-card-radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--neutral-light);
+    margin-bottom: var(--mobile-card-gap);
+    overflow: hidden;
+  }
+  
+  .mobile-card-header {
+    padding: var(--mobile-space-lg) var(--mobile-card-padding);
+    background: var(--heyan-gold);
+    color: var(--text-white);
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+  }
+  
+  .mobile-card-body {
+    padding: var(--mobile-card-padding);
+  }
+  
+  .mobile-card-footer {
+    padding: var(--mobile-card-padding);
+    border-top: 1px solid var(--neutral-light);
+    background: var(--neutral-warm);
+  }
+  
+  .mobile-product-card {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 400px;
+  }
+  
+  .mobile-product-image {
+    height: 200px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+  }
+  
+  .mobile-product-content {
+    flex: 1;
+    padding: var(--mobile-card-padding);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .mobile-product-title {
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    color: var(--heyan-green);
+    margin-bottom: var(--mobile-space-sm);
+  }
+  
+  .mobile-product-description {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    line-height: var(--leading-normal);
+    margin-bottom: var(--mobile-space-md);
+    flex: 1;
+  }
+  
+  .mobile-product-actions {
+    margin-top: auto;
+  }
+}
+
+/* 手機表單系統 */
+@media (max-width: 768px) {
+  .mobile-form {
+    width: 100%;
+  }
+  
+  .mobile-form-group {
+    margin-bottom: var(--mobile-space-lg);
+  }
+  
+  .mobile-form-label {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--text-primary);
+    margin-bottom: var(--mobile-space-sm);
+  }
+  
+  .mobile-form-input {
+    width: 100%;
+    min-height: var(--touch-target-min);
+    padding: 12px 16px;
+    font-size: 16px; /* 防止 iOS 縮放 */
+    line-height: 1.5;
+    color: var(--text-primary);
+    background-color: var(--neutral-white);
+    border: 2px solid var(--neutral-medium);
+    border-radius: var(--mobile-card-radius);
+    transition: all 0.2s ease;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  
+  .mobile-form-input:focus {
+    outline: none;
+    border-color: var(--heyan-gold);
+    box-shadow: 0 0 0 3px rgba(217, 172, 57, 0.1);
+  }
+  
+  .mobile-form-textarea {
+    min-height: 120px;
+    resize: vertical;
+  }
+  
+  .mobile-form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 12px center;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    padding-right: 40px;
+  }
+  
+  .mobile-form-checkbox-group,
+  .mobile-form-radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--mobile-space-md);
+  }
+  
+  .mobile-form-checkbox-item,
+  .mobile-form-radio-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-target-min);
+    padding: var(--mobile-space-sm);
+    border-radius: var(--mobile-card-radius);
+    border: 2px solid var(--neutral-medium);
+    background: var(--neutral-white);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+  }
+  
+  .mobile-form-checkbox-item:hover,
+  .mobile-form-radio-item:hover {
+    border-color: var(--heyan-gold);
+    background: var(--neutral-warm);
+  }
+  
+  .mobile-form-checkbox-item.selected,
+  .mobile-form-radio-item.selected {
+    border-color: var(--heyan-gold);
+    background: rgba(217, 172, 57, 0.1);
+  }
+}
+
+/* 手機間距與佈局 */
+@media (max-width: 768px) {
+  .mobile-section {
+    padding: var(--mobile-space-3xl) 0;
+  }
+  
+  .mobile-section-sm {
+    padding: var(--mobile-space-2xl) 0;
+  }
+  
+  .mobile-section-lg {
+    padding: 4rem 0;
+  }
+  
+  .mobile-title {
+    margin-bottom: var(--mobile-space-xl);
+    text-align: center;
+  }
+  
+  .mobile-subtitle {
+    margin-bottom: var(--mobile-space-lg);
+  }
+  
+  .mobile-paragraph {
+    margin-bottom: var(--mobile-space-lg);
+    line-height: var(--leading-relaxed);
+  }
+  
+  .mobile-paragraph:last-child {
+    margin-bottom: 0;
+  }
+  
+  .mobile-list {
+    margin-bottom: var(--mobile-space-lg);
+  }
+  
+  .mobile-list-item {
+    margin-bottom: var(--mobile-space-md);
+    padding: var(--mobile-space-sm) 0;
+  }
+  
+  .mobile-list-item:last-child {
+    margin-bottom: 0;
+  }
+  
+  .mobile-grid-1 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--mobile-card-gap);
+  }
+  
+  .mobile-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--mobile-space-md);
+  }
+  
+  .mobile-flex {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mobile-card-gap);
+  }
+  
+  .mobile-flex-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .mobile-flex-center {
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .mobile-center {
+    text-align: center;
+    max-width: 100%;
+  }
+}
+
+/* 手機圖片優化 */
+@media (max-width: 768px) {
+  .mobile-image {
+    width: 100%;
+    height: auto;
+    border-radius: var(--mobile-card-radius);
+    object-fit: cover;
+  }
+  
+  .mobile-image-square {
+    aspect-ratio: 1 / 1;
+  }
+  
+  .mobile-image-portrait {
+    aspect-ratio: 3 / 4;
+  }
+  
+  .mobile-image-landscape {
+    aspect-ratio: 16 / 9;
+  }
+  
+  .mobile-product-image {
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto var(--mobile-space-lg);
+  }
+  
+  .mobile-logo {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto var(--mobile-space-xl);
+  }
+  
+  .mobile-logo-sm {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+/* 手機表格優化 */
+@media (max-width: 768px) {
+  .mobile-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+  }
+  
+  .mobile-table th,
+  .mobile-table td {
+    padding: var(--mobile-space-md) var(--mobile-space-sm);
+    text-align: left;
+    border-bottom: 1px solid var(--neutral-light);
+  }
+  
+  .mobile-table th {
+    background: var(--neutral-warm);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+  }
+  
+  .mobile-table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mobile-card-table {
+    display: block;
+  }
+  
+  .mobile-card-table-item {
+    background: var(--neutral-white);
+    border: 1px solid var(--neutral-light);
+    border-radius: var(--mobile-card-radius);
+    padding: var(--mobile-card-padding);
+    margin-bottom: var(--mobile-space-md);
+  }
+  
+  .mobile-card-table-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--mobile-space-sm) 0;
+    border-bottom: 1px solid var(--neutral-light);
+  }
+  
+  .mobile-card-table-row:last-child {
+    border-bottom: none;
+  }
+  
+  .mobile-card-table-label {
+    font-weight: var(--font-medium);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  
+  .mobile-card-table-value {
+    font-weight: var(--font-normal);
+    color: var(--text-primary);
+    text-align: right;
+  }
+}
+
+/* 手機動畫與效果 */
+@media (max-width: 768px) {
+  .mobile-animate {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  
+  .mobile-animate:hover {
+    transform: translateY(-2px);
+  }
+  
+  .mobile-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--mobile-space-xl);
+  }
+  
+  .mobile-loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--neutral-medium);
+    border-top: 2px solid var(--heyan-gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  .mobile-scroll-indicator {
+    position: fixed;
+    bottom: var(--mobile-space-lg);
+    right: var(--mobile-space-lg);
+    width: var(--touch-target-min);
+    height: var(--touch-target-min);
+    background: var(--heyan-gold);
+    color: var(--text-white);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    border: none;
+  }
+  
+  .mobile-scroll-indicator.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 手機性能優化 */
+@media (max-width: 768px) {
+  .mobile-gpu-accelerated {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+  
+  .mobile-scroll-optimized {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  .mobile-touch-optimized {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  .mobile-text-optimized {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeSpeed;
+  }
+}
+
+/* 手機無障礙優化 */
+@media (max-width: 768px) {
+  .mobile-focus-visible:focus-visible {
+    outline: 3px solid var(--heyan-gold);
+    outline-offset: 2px;
+  }
+  
+  .mobile-skip-link {
+    position: absolute;
+    top: -40px;
+    left: 6px;
+    background: var(--heyan-gold);
+    color: var(--text-white);
+    padding: 8px;
+    border-radius: 4px;
+    text-decoration: none;
+    z-index: 9999;
+    font-size: var(--text-sm);
+  }
+  
+  .mobile-skip-link:focus {
+    top: 6px;
+  }
+  
+  .mobile-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  
+  .mobile-full-height {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* ========================================
+   響應式調整
+   ======================================== */
+
+/* 大螢幕優化 */
+@media (min-width: 1200px) {
+  .text-hero {
+    font-size: 4.5rem;
+    letter-spacing: var(--tracking-widest);
+  }
+  
+  .text-h1 {
+    font-size: 3.5rem;
+  }
+  
+  .brand-title {
+    font-size: 4rem;
+  }
+}
+
+/* 平板調整 */
+@media (max-width: 1024px) {
+  .text-hero {
+    font-size: 3rem;
+    letter-spacing: var(--tracking-wide);
+  }
+  
+  .text-h1 {
+    font-size: 2.5rem;
+  }
+  
+  .brand-title {
+    font-size: 2.5rem;
+    letter-spacing: var(--tracking-wide);
+  }
+  
+  .brand-subtitle {
+    font-size: var(--text-xl);
+  }
+}
+
+/* 手機字型與按鈕調整 */
+@media (max-width: 768px) {
+  body {
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+  }
+  
+  .text-hero {
+    font-size: 2.5rem;
+    letter-spacing: var(--tracking-normal);
+    line-height: var(--leading-tight);
+  }
+  
+  .text-h1 {
+    font-size: 2rem;
+  }
+  
+  .text-h2 {
+    font-size: 1.75rem;
+  }
+  
+  .text-h3 {
+    font-size: 1.5rem;
+  }
+  
+  .brand-title {
+    font-size: 2rem;
+    letter-spacing: var(--tracking-normal);
+  }
+  
+  .brand-subtitle {
+    font-size: var(--text-lg);
+  }
+  
+  .product-name {
+    font-size: var(--text-2xl);
+  }
+  
+  .text-body-xl,
+  .text-body-lg {
+    font-size: var(--text-base);
+  }
+  
+  /* 手機按鈕優化 */
+  .btn-primary,
+  .btn-secondary,
+  .btn-outline {
+    min-height: var(--touch-target-min);
+    padding: 14px 20px;
+    font-size: 16px; /* 防止 iOS 縮放 */
+    border-radius: var(--mobile-card-radius);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .btn-full-width {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .btn-primary-large {
+    min-height: var(--touch-target-large);
+    font-size: var(--text-lg);
+    padding: 16px 24px;
+  }
+  
+  /* 手機段落間距調整 */
+  p {
+    margin-bottom: 1.25rem;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    margin-bottom: 0.75rem;
+  }
+  
+  .card-brand {
+    border-radius: var(--radius-lg);
+  }
+  
+  .feature-highlight {
+    padding: 20px;
+    border-radius: var(--radius-lg);
+  }
+  
+  .divider-brand {
+    width: 60px;
+    height: 3px;
+  }
+}
+
+/* 小手機調整 */
+@media (max-width: 480px) {
+  .text-hero {
+    font-size: 2rem;
+  }
+  
+  .text-h1 {
+    font-size: 1.75rem;
+  }
+  
+  .brand-title {
+    font-size: 1.75rem;
+  }
+  
+  .brand-subtitle {
+    font-size: var(--text-base);
+  }
+}
+
+/* ========================================
+   可訪問性與無障礙優化
+   ======================================== */
+
+.text-accessible {
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+}
+
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-error { color: var(--error); }
+.text-info { color: var(--info); }
+
+/* 減少動畫偏好支援 */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-delayed,
+  .animate-fade-in {
+    animation: none;
+  }
+  
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .btn-outline:hover,
+  .card-brand:hover,
+  .card-hover:hover,
+  .btn-hover:hover,
+  .mobile-animate:hover {
+    transform: none;
+  }
+  
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* 高對比模式支援 */
+@media (prefers-contrast: high) {
+  body {
+    color: #000000;
+    background-color: #FFFFFF;
+  }
+  
+  .text-secondary {
+    color: #333333;
+  }
+  
+  .text-muted {
+    color: #666666;
+  }
+  
+  .btn-primary,
+  .btn-secondary {
+    border-width: 3px;
+  }
+  
+  .mobile-form-input:focus {
+    border-width: 3px;
+    border-color: #000000;
+  }
+}
+
+/* ========================================
+   瀏覽器特定修復
+   ======================================== */
+
+/* iOS Safari 修復 */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important; /* 防止 iOS 縮放 */
+  }
+  
+  button,
+  input[type="button"],
+  input[type="submit"] {
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+}
+
+/* Android 特定修復 */
+@media (max-width: 768px) {
+  .mobile-text-crisp {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  .mobile-scroll-fix {
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+  }
+}
+
+/* PWA 支援 */
+@media (display-mode: standalone) {
+  .mobile-nav {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .mobile-section {
+    padding-bottom: calc(var(--mobile-space-3xl) + env(safe-area-inset-bottom));
+  }
+}
+
+/* 列印樣式優化 */
+@media print {
+  .mobile-nav,
+  .mobile-scroll-indicator,
+  .btn-primary,
+  .btn-secondary,
+  .btn-outline {
+    display: none !important;
+  }
+  
+  .mobile-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+  
+  .brand-title,
+  .text-h1,
+  .text-h2,
+  .text-h3 {
+    color: #000 !important;
+  }
+}
