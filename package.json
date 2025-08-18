@@ -1,36 +1,38 @@
 {
-  "name": "BeautyMemory",
-  "version": "0.1.0",
+  "name": "beauty-memory-website",
+  "version": "2.0.0",
+  "description": "美魔力 Beauty Memory - AI 智能肌膚分析系統",
   "private": true,
   "dependencies": {
-    "@apollo/client": "^3.12.5",
-    "@heroicons/react": "^2.2.0",
-    "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "dropbox": "^10.34.0",
-    "dropbox-v2-api": "^2.5.11",
-    "foodordertw-pcloud-sdk-js": "^1.0.0",
-    "lucide-react": "^0.469.0",
-    "pcloud-sdk-js": "^2.0.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^7.1.1",
+    "jszip": "^3.10.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^4.12.0",
     "react-scripts": "5.0.1",
-    "url": "^0.11.4",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js'",
+    "lint": "eslint src --ext .js,.jsx",
+    "lint:fix": "eslint src --ext .js,.jsx --fix",
+    "format": "prettier --write src/**/*.{js,jsx,css,md}",
+    "clean": "rm -rf node_modules package-lock.json && npm install",
+    "clean-win": "rmdir /s node_modules && del package-lock.json && npm install"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "no-unused-vars": "warn",
+      "no-console": "warn",
+      "react-hooks/exhaustive-deps": "warn"
+    }
   },
   "browserslist": {
     "production": [
@@ -45,8 +47,36 @@
     ]
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17"
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "^13.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "autoprefixer": "^10.4.14",
+    "eslint": "^8.20.0",
+    "postcss": "^8.4.24",
+    "prettier": "^2.7.1",
+    "tailwindcss": "^3.3.0"
+  },
+  "proxy": "http://localhost:3001",
+  "homepage": ".",
+  "keywords": [
+    "beauty",
+    "skincare",
+    "ai",
+    "analysis",
+    "perfect-corp",
+    "react",
+    "taiwan"
+  ],
+  "author": {
+    "name": "Beauty Memory Team",
+    "email": "contact@beautymemory.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beauty-memory/website.git"
+  },
+  "bugs": {
+    "url": "https://github.com/beauty-memory/website/issues"
   }
 }
