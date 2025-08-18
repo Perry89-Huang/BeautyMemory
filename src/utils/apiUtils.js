@@ -1,444 +1,402 @@
-import perfectCorpAPI, { PerfectCorpAPIError, analyseSkin } from '../services/perfectCorpAPI';
-import { generateMockAnalysisResult, createMemoryFromAnalysis } from './mockData';
-
 /**
- * API 工具函數
- * 提供統一的 API 介面，支援 Mock 和真實 API 切換
+ * API 工具函數 - 更新版本
+ * 配合完整的 Perfect Corp API 服務
  */
 
-// 從環境變數讀取配置
-const ENABLE_MOCK_API = process.env.REACT_APP_ENABLE_MOCK_API === 'true';
-const DEBUG_MODE = process.env.REACT_APP_DEBUG_MODE === 'true';
+import perfectCorpAPI, { 
+  analyseSkin,
+  checkAPIAvailability,
+  getUserQuota,
+  testAPIConnection,
+  preprocessImage,
+  getErrorMessage,
+  createMemoryFromAnalysisResult,
+  compareAnalysisResults,
+  batchAnalysis,
+  exportAnalysisResults,
+  skinAnalysisHistory,
+  SkinHealthAssessment,
+  FengShuiIntegration,
+  PerfectCorpAPIError
+} from '../services/perfectCorpAPI';
 
 /**
  * 統一的肌膚分析介面
  */
 export const performSkinAnalysis = async (imageFile, onProgress = null) => {
-  if (DEBUG_MODE) {
-    console.log('Starting skin analysis...', {
-      fileName: imageFile.name,
-      fileSize: imageFile.size,
-      useMockAPI: ENABLE_MOCK_API
-    });
-  }
-
   try {
-    if (ENABLE_MOCK_API) {
-      return await performMockSkinAnalysis(imageFile, onProgress);
-    } else {
-      return await performRealSkinAnalysis(imageFile, onProgress);
-    }
+    // 使用完整的 Perfect Corp API 服務
+    return await analyseSkin(imageFile, onProgress);
   } catch (error) {
-    if (DEBUG_MODE) {
-      console.error('Skin analysis failed:', error);
-    }
-    
-    // 如果真實 API 失敗，回退到 Mock API
-    if (!ENABLE_MOCK_API) {
-      console.warn('Real API failed, falling back to mock API');
-      return await performMockSkinAnalysis(imageFile, onProgress);
-    }
-    
+    console.error('Skin analysis failed:', error);
     throw error;
   }
 };
 
 /**
- * 真實 API 肌膚分析
+ * 批量肌膚分析
  */
-const performRealSkinAnalysis = async (imageFile, onProgress) => {
+export const performBatchAnalysis = async (imageFiles, onBatchProgress = null) => {
   try {
-    const result = await analyseSkin(imageFile, (progress) => {
-      // 轉換 API 進度格式為應用程式格式
-      const stepMapping = {
-        uploading: { step: 1, message: '正在上傳照片...' },
-        starting: { step: 2, message: 'AI 引擎啟動中...' },
-        analyzing: { step: 2, message: '進行 14 項專業檢測...' },
-        polling: { step: 2, message: '分析進行中...' },
-        completed: { step: 3, message: '生成分析報告...' },
-        error: { step: -1, message: '分析失敗' }
+    return await batchAnalysis(imageFiles, onBatchProgress);
+  } catch (error) {
+    console.error('Batch analysis failed:', error);
+    throw error;
+  }
+};
+
+/**
+ * 導出分析結果
+ */
+export const exportResults = async (results, format = 'json') => {
+  try {
+    return await exportAnalysisResults(results, format);
+  } catch (error) {
+    console.error('Export failed:', error);
+    throw error;
+  }
+};
+
+/**
+ * 獲取肌膚健康評估
+ */
+export const getSkinHealthAssessment = (analysisResult) => {
+  try {
+    return {
+      health: SkinHealthAssessment.assessOverallHealth(analysisResult),
+      routine: SkinHealthAssessment.generateSkincareRoutine(analysisResult),
+      timeline: SkinHealthAssessment.predictImprovementTimeline(analysisResult)
+    };
+  } catch (error) {
+    console.error('Health assessment failed:', error);
+    return null;
+  }
+};
+
+/**
+ * 獲取風水建議
+ */
+export const getFengShuiRecommendations = (analysisResult = null) => {
+  try {
+    return {
+      timing: FengShuiIntegration.getBestSkincareTime(),
+      seasonal: FengShuiIntegration.getSeasonalRecommendation(),
+      colors: analysisResult ? FengShuiIntegration.getColorRecommendation(analysisResult) : null
+    };
+  } catch (error) {
+    console.error('FengShui recommendations failed:', error);
+    return null;
+  }
+};
+
+/**
+ * 管理分析歷史
+ */
+export const HistoryManager = {
+  save: (analysisResult) => skinAnalysisHistory.save(analysisResult),
+  getAll: () => skinAnalysisHistory.getAll(),
+  getById: (id) => skinAnalysisHistory.getById(id),
+  delete: (id) => skinAnalysisHistory.delete(id),
+  clear: () => skinAnalysisHistory.clear(),
+  getStats: () => skinAnalysisHistory.getStatistics()
+};
+
+/**
+ * 創建美麗記憶條目
+ */
+export const createBeautyMemory = (analysisResult, existingMemories = []) => {
+  try {
+    return createMemoryFromAnalysisResult(analysisResult, existingMemories);
+  } catch (error) {
+    console.error('Failed to create beauty memory:', error);
+    throw error;
+  }
+};
+
+/**
+ * 計算美麗趨勢
+ */
+export const calculateBeautyTrend = (memories) => {
+  try {
+    if (memories.length < 2) {
+      return {
+        trend: 'insufficient_data',
+        message: '需要更多分析數據來計算趨勢',
+        direction: 'neutral'
       };
-
-      const mappedProgress = stepMapping[progress.step] || { step: 2, message: '處理中...' };
-      
-      if (onProgress) {
-        onProgress({
-          ...mappedProgress,
-          progress: progress.progress || 0,
-          details: progress.message
-        });
-      }
-    });
-
-    return result;
-  } catch (error) {
-    if (error instanceof PerfectCorpAPIError) {
-      throw new APIError(error.message, error.code, error.details);
-    }
-    throw new APIError('Skin analysis failed', 'ANALYSIS_ERROR', error);
-  }
-};
-
-/**
- * Mock API 肌膚分析（用於開發和測試）
- */
-const performMockSkinAnalysis = async (imageFile, onProgress) => {
-  const steps = [
-    { step: 1, message: '正在上傳照片...', delay: 1000 },
-    { step: 2, message: 'AI 引擎啟動中...', delay: 1500 },
-    { step: 2, message: '進行 14 項專業檢測...', delay: 3000 },
-    { step: 3, message: '生成分析報告...', delay: 1000 }
-  ];
-
-  for (let i = 0; i < steps.length; i++) {
-    const step = steps[i];
-    
-    if (onProgress) {
-      onProgress({
-        ...step,
-        progress: ((i + 1) / steps.length) * 100
-      });
     }
 
-    await new Promise(resolve => setTimeout(resolve, step.delay));
-  }
-
-  // 生成 Mock 結果
-  const mockResult = generateMockAnalysisResult();
-  
-  // 添加真實 API 格式的 metadata
-  mockResult.metadata = {
-    ...mockResult.metadata,
-    apiType: 'mock',
-    processingTime: steps.reduce((sum, step) => sum + step.delay, 0)
-  };
-
-  return mockResult;
-};
-
-/**
- * 圖片預處理和驗證
- */
-export const preprocessImage = async (file) => {
-  try {
-    // 基本驗證
-    validateImageFile(file);
-    
-    // 圖片壓縮和優化（如果需要）
-    const processedFile = await optimizeImage(file);
-    
-    return processedFile;
-  } catch (error) {
-    throw new APIError('Image preprocessing failed', 'PREPROCESSING_ERROR', error);
-  }
-};
-
-/**
- * 驗證圖片檔案
- */
-const validateImageFile = (file) => {
-  const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-  const maxSize = 10 * 1024 * 1024; // 10MB
-  const minDimensions = { width: 480, height: 480 };
-  
-  const errors = [];
-  
-  if (!validTypes.includes(file.type)) {
-    errors.push('請上傳 JPG、JPEG 或 PNG 格式的圖片');
-  }
-  
-  if (file.size > maxSize) {
-    errors.push('圖片大小不能超過 10MB');
-  }
-  
-  if (file.size < 1024) {
-    errors.push('圖片檔案過小，請選擇有效的圖片');
-  }
-  
-  if (errors.length > 0) {
-    throw new APIError('Image validation failed', 'INVALID_IMAGE', errors);
-  }
-  
-  return true;
-};
-
-/**
- * 圖片優化處理
- */
-const optimizeImage = async (file) => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    img.onload = () => {
-      try {
-        // 獲取圖片尺寸
-        const { width, height } = img;
-        
-        // 計算最佳尺寸（保持比例，限制最大尺寸）
-        const maxDimension = 2048;
-        let newWidth = width;
-        let newHeight = height;
-        
-        if (width > maxDimension || height > maxDimension) {
-          const scale = Math.min(maxDimension / width, maxDimension / height);
-          newWidth = Math.floor(width * scale);
-          newHeight = Math.floor(height * scale);
+    const recentScores = memories
+      .slice(0, 5)
+      .map(memory => {
+        if (memory.analysisData?.overall_score) {
+          return memory.analysisData.overall_score;
         }
-        
-        // 設置畫布尺寸
-        canvas.width = newWidth;
-        canvas.height = newHeight;
-        
-        // 繪製優化後的圖片
-        ctx.drawImage(img, 0, 0, newWidth, newHeight);
-        
-        // 轉換為 Blob
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              // 創建新的 File 對象
-              const optimizedFile = new File([blob], file.name, {
-                type: file.type,
-                lastModified: Date.now()
-              });
-              resolve(optimizedFile);
-            } else {
-              reject(new Error('Failed to optimize image'));
-            }
-          },
-          file.type,
-          0.9 // 90% 品質
-        );
-      } catch (error) {
-        reject(error);
-      }
-    };
-    
-    img.onerror = () => {
-      reject(new Error('Failed to load image'));
-    };
-    
-    img.src = URL.createObjectURL(file);
-  });
-};
+        const metrics = Object.values(memory.skinMetrics || {});
+        return metrics.length > 0 ? metrics.reduce((sum, score) => sum + score, 0) / metrics.length : 0;
+      })
+      .filter(score => score > 0);
 
-/**
- * 錯誤處理和用戶友好的錯誤消息
- */
-export const getErrorMessage = (error) => {
-  if (error instanceof APIError || error instanceof PerfectCorpAPIError) {
-    switch (error.code) {
-      case 'INVALID_FILE_FORMAT':
-        return '圖片格式不支援，請使用 JPG、JPEG 或 PNG 格式';
-      case 'FILE_TOO_LARGE':
-        return '圖片檔案過大，請選擇小於 10MB 的圖片';
-      case 'INVALID_IMAGE':
-        return Array.isArray(error.details) ? error.details.join('、') : '圖片格式有誤';
-      case 'AUTH_ERROR':
-        return 'API 認證失敗，請檢查配置';
-      case 'NETWORK_ERROR':
-        return '網絡連接異常，請檢查網絡狀態';
-      case 'ANALYSIS_TIMEOUT':
-        return '分析超時，請重試';
-      case 'API_ERROR':
-        return 'API 服務暫時不可用，請稍後重試';
-      default:
-        return error.message || '未知錯誤，請重試';
-    }
-  }
-  
-  return '系統錯誤，請重試';
-};
-
-/**
- * 自定義 API 錯誤類
- */
-export class APIError extends Error {
-  constructor(message, code, details = null) {
-    super(message);
-    this.name = 'APIError';
-    this.code = code;
-    this.details = details;
-  }
-}
-
-/**
- * 檢查 API 可用性
- */
-export const checkAPIAvailability = async () => {
-  try {
-    if (ENABLE_MOCK_API) {
-      return { available: true, type: 'mock' };
-    }
-    
-    // 嘗試獲取 access token 來檢查 API 可用性
-    await perfectCorpAPI.getAccessToken();
-    return { available: true, type: 'real' };
-  } catch (error) {
-    if (DEBUG_MODE) {
-      console.warn('API availability check failed:', error);
-    }
-    return { available: false, error: error.message };
-  }
-};
-
-/**
- * 獲取用戶使用配額
- */
-export const getUserQuota = async () => {
-  try {
-    if (ENABLE_MOCK_API) {
+    if (recentScores.length < 2) {
       return {
-        available: true,
-        remaining: 100,
-        total: 100,
-        type: 'mock'
+        trend: 'insufficient_data',
+        message: '需要更多有效分析數據',
+        direction: 'neutral'
       };
     }
-    
-    const quotaInfo = await perfectCorpAPI.makeAPIRequest('/client/credit');
-    
-    const totalCredits = quotaInfo.results.reduce((sum, credit) => sum + credit.amount, 0);
-    
+
+    const firstScore = recentScores[recentScores.length - 1];
+    const lastScore = recentScores[0];
+    const difference = lastScore - firstScore;
+
+    let trend, message, direction;
+
+    if (difference > 5) {
+      trend = 'improving';
+      direction = 'up';
+      message = `肌膚狀態持續改善，提升了 ${difference.toFixed(1)} 分`;
+    } else if (difference < -5) {
+      trend = 'declining';
+      direction = 'down';
+      message = `肌膚狀態需要關注，下降了 ${Math.abs(difference).toFixed(1)} 分`;
+    } else {
+      trend = 'stable';
+      direction = 'neutral';
+      message = '肌膚狀態保持穩定';
+    }
+
     return {
-      available: totalCredits > 0,
-      remaining: totalCredits,
-      total: totalCredits,
-      type: 'real',
-      details: quotaInfo.results
+      trend,
+      message,
+      direction,
+      changeValue: difference,
+      averageScore: recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length,
+      dataPoints: recentScores.length
     };
   } catch (error) {
-    if (DEBUG_MODE) {
-      console.warn('Failed to get user quota:', error);
-    }
+    console.error('Failed to calculate beauty trend:', error);
     return {
-      available: false,
-      remaining: 0,
-      total: 0,
-      error: error.message
+      trend: 'error',
+      message: '計算趨勢時發生錯誤',
+      direction: 'neutral'
     };
   }
 };
 
 /**
- * 獲取使用歷史
+ * 獲取今日護膚建議
  */
-export const getUsageHistory = async (pageSize = 20, startingToken = null) => {
+export const getTodaySkincareAdvice = (userProfile = {}) => {
   try {
-    if (ENABLE_MOCK_API) {
-      return {
-        history: [],
-        nextToken: null,
-        type: 'mock'
-      };
+    const fengShui = getFengShuiRecommendations();
+    const now = new Date();
+    const hour = now.getHours();
+    
+    let timeAdvice = '';
+    if (hour >= 6 && hour < 12) {
+      timeAdvice = '晨間護膚重點：清潔、保濕、防曬';
+    } else if (hour >= 12 && hour < 18) {
+      timeAdvice = '午間護膚重點：補水、防曬補強';
+    } else if (hour >= 18 && hour < 22) {
+      timeAdvice = '晚間護膚重點：深層清潔、修復保養';
+    } else {
+      timeAdvice = '夜間護膚重點：密集修復、抗老護理';
     }
-    
-    let endpoint = `/client/credit/history?page_size=${pageSize}`;
-    if (startingToken) {
-      endpoint += `&starting_token=${startingToken}`;
-    }
-    
-    const historyInfo = await perfectCorpAPI.makeAPIRequest(endpoint);
-    
+
     return {
-      history: historyInfo.result.history || [],
-      nextToken: historyInfo.result.next_token,
-      type: 'real'
+      timeAdvice,
+      fengShuiTiming: fengShui?.timing,
+      seasonalFocus: fengShui?.seasonal,
+      recommendedProducts: getRecommendedProducts(hour, userProfile)
     };
   } catch (error) {
-    if (DEBUG_MODE) {
-      console.warn('Failed to get usage history:', error);
-    }
-    return {
-      history: [],
-      nextToken: null,
-      error: error.message
-    };
+    console.error('Failed to get today skincare advice:', error);
+    return null;
   }
 };
 
 /**
- * 記憶體管理工具
+ * 根據時間和用戶資料推薦產品
  */
-export const createMemoryFromAnalysisResult = (analysisResult, existingMemories = []) => {
-  return createMemoryFromAnalysis(analysisResult, existingMemories);
-};
-
-/**
- * 分析結果比較工具
- */
-export const compareAnalysisResults = (currentResult, previousResult) => {
-  if (!previousResult) {
-    return {
-      hasComparison: false,
-      message: '這是您的第一次分析結果'
-    };
-  }
+const getRecommendedProducts = (hour, userProfile) => {
+  const products = [];
   
-  const improvements = [];
-  const deteriorations = [];
-  
-  currentResult.concerns.forEach(currentConcern => {
-    const previousConcern = previousResult.concerns.find(
-      p => p.name === currentConcern.name
-    );
+  if (hour >= 6 && hour < 12) {
+    products.push('溫和洗面乳', '保濕精華', '防曬霜 SPF30+');
+  } else if (hour >= 18 && hour < 22) {
+    products.push('深層清潔', '修復精華', '晚霜');
     
-    if (previousConcern) {
-      const difference = currentConcern.score - previousConcern.score;
-      
-      if (difference > 0) {
-        improvements.push({
-          name: currentConcern.name,
-          improvement: difference
-        });
-      } else if (difference < 0) {
-        deteriorations.push({
-          name: currentConcern.name,
-          decline: Math.abs(difference)
-        });
+    if (userProfile.skinType === 'dry') {
+      products.push('滋潤面膜');
+    } else if (userProfile.skinType === 'oily') {
+      products.push('控油精華');
+    }
+  }
+  
+  return products;
+};
+
+/**
+ * 智能護膚計劃生成器
+ */
+export const generateSmartSkincareRoutine = (analysisResults, userPreferences = {}) => {
+  try {
+    if (!analysisResults || analysisResults.length === 0) {
+      return getBasicSkincareRoutine();
+    }
+
+    const latestResult = analysisResults[0];
+    const healthAssessment = getSkinHealthAssessment(latestResult);
+    const fengShui = getFengShuiRecommendations(latestResult);
+    const trend = calculateBeautyTrend(analysisResults);
+
+    return {
+      basic: healthAssessment?.routine || getBasicSkincareRoutine(),
+      personalized: getPersonalizedRoutine(latestResult, userPreferences),
+      fengShuiOptimized: getFengShuiOptimizedRoutine(fengShui),
+      trendBased: getTrendBasedAdjustments(trend),
+      timeline: healthAssessment?.timeline || []
+    };
+  } catch (error) {
+    console.error('Failed to generate smart skincare routine:', error);
+    return getBasicSkincareRoutine();
+  }
+};
+
+const getBasicSkincareRoutine = () => ({
+  morning: ['溫和潔面', '保濕精華', '防曬霜'],
+  evening: ['深層清潔', '保濕乳液'],
+  weekly: ['溫和去角質'],
+  priority: ['基礎保濕', '防曬保護']
+});
+
+const getPersonalizedRoutine = (analysisResult, preferences) => {
+  const routine = getBasicSkincareRoutine();
+  
+  // 根據分析結果調整
+  analysisResult.concerns?.forEach(concern => {
+    if (concern.score < 70) {
+      switch (concern.category) {
+        case 'hydration':
+          routine.evening.push('玻尿酸精華');
+          break;
+        case 'aging':
+          routine.evening.push('抗老精華');
+          break;
+        case 'pigmentation':
+          routine.morning.push('維他命C精華');
+          break;
       }
     }
   });
   
+  // 根據用戶偏好調整
+  if (preferences.minimalist) {
+    routine.morning = routine.morning.slice(0, 3);
+    routine.evening = routine.evening.slice(0, 3);
+  }
+  
+  return routine;
+};
+
+const getFengShuiOptimizedRoutine = (fengShui) => {
+  if (!fengShui) return {};
+  
   return {
-    hasComparison: true,
-    improvements,
-    deteriorations,
-    overallChange: currentResult.overall_score - previousResult.overall_score,
-    skinAgeChange: currentResult.skin_age - previousResult.skin_age,
-    daysBetween: Math.floor((new Date(currentResult.timestamp) - new Date(previousResult.timestamp)) / (1000 * 60 * 60 * 24))
+    bestTime: fengShui.timing?.recommendation || '任何時間都適合基礎護理',
+    seasonalFocus: fengShui.seasonal?.recommendation || '保持均衡護理',
+    luckyColors: fengShui.colors || null
+  };
+};
+
+const getTrendBasedAdjustments = (trend) => {
+  if (!trend) return {};
+  
+  const adjustments = [];
+  
+  if (trend.direction === 'down') {
+    adjustments.push('加強修復護理');
+    adjustments.push('增加營養精華使用頻率');
+  } else if (trend.direction === 'up') {
+    adjustments.push('維持現有護理習慣');
+    adjustments.push('可嘗試新的進階護理');
+  }
+  
+  return {
+    message: trend.message,
+    adjustments
   };
 };
 
 /**
- * 導出配置信息（用於調試）
+ * 分析結果增強處理
  */
-export const getAPIConfig = () => {
-  if (!DEBUG_MODE) {
-    return { debug: false };
+export const enhanceAnalysisResult = (result, previousResults = []) => {
+  try {
+    const enhanced = { ...result };
+    
+    // 添加比較數據
+    if (previousResults.length > 0) {
+      enhanced.comparison = compareAnalysisResults(result, previousResults[0]);
+    }
+    
+    // 添加健康評估
+    enhanced.healthAssessment = getSkinHealthAssessment(result);
+    
+    // 添加風水建議
+    enhanced.fengShuiAdvice = getFengShuiRecommendations(result);
+    
+    // 添加趨勢分析
+    if (previousResults.length > 0) {
+      const allResults = [result, ...previousResults];
+      enhanced.trend = calculateBeautyTrend(allResults.map(r => ({
+        analysisData: r,
+        skinMetrics: r.concerns?.reduce((acc, c) => {
+          acc[c.name] = c.score;
+          return acc;
+        }, {}) || {}
+      })));
+    }
+    
+    // 添加個性化建議
+    enhanced.personalizedAdvice = generatePersonalizedAdvice(result);
+    
+    return enhanced;
+  } catch (error) {
+    console.error('Failed to enhance analysis result:', error);
+    return result;
   }
-  
-  return {
-    debug: true,
-    useMockAPI: ENABLE_MOCK_API,
-    hasClientId: !!process.env.REACT_APP_PERFECT_CORP_CLIENT_ID,
-    hasClientSecret: !!process.env.REACT_APP_PERFECT_CORP_CLIENT_SECRET,
-    timeout: process.env.REACT_APP_API_TIMEOUT || 30000,
-    retryAttempts: process.env.REACT_APP_API_RETRY_ATTEMPTS || 3
-  };
 };
 
-// 默認導出
-export default {
-  performSkinAnalysis,
+const generatePersonalizedAdvice = (result) => {
+  const advice = [];
+  const score = result.overall_score;
+  
+  if (score >= 85) {
+    advice.push('🎉 您的肌膚狀態優秀！繼續保持現有的護理習慣');
+    advice.push('💎 可以嘗試一些進階的美容護理來維持最佳狀態');
+  } else if (score >= 70) {
+    advice.push('😊 您的肌膚狀態良好，建議針對性改善');
+    advice.push('📈 堅持護理，很快就能看到更好的效果');
+  } else {
+    advice.push('💪 肌膚需要加強護理，建議制定系統性的改善計劃');
+    advice.push('🔬 考慮諮詢專業皮膚科醫師獲得更精準的建議');
+  }
+  
+  return advice;
+};
+
+// 導出所有工具函數
+export {
+  // 原有的導出
   preprocessImage,
   getErrorMessage,
   checkAPIAvailability,
   getUserQuota,
-  getUsageHistory,
-  createMemoryFromAnalysisResult,
+  testAPIConnection,
   compareAnalysisResults,
-  getAPIConfig
+  PerfectCorpAPIError,
+  
+  // Perfect Corp API 實例
+  perfectCorpAPI as default
 };
