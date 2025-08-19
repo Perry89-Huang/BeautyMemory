@@ -4,6 +4,7 @@
   "description": "美魔力 Beauty Memory - AI 智能肌膚分析系統",
   "private": true,
   "dependencies": {
+    "jsencrypt": "^3.5.4",
     "jszip": "^3.10.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

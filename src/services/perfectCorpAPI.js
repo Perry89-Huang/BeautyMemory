@@ -14,7 +14,7 @@
 
 const API_CONFIG = {
   baseURL: 'https://yce-api-01.perfectcorp.com/s2s/v1.0',
-  authURL: 'https://yce-api-01.perfectcorp.com/s2s/v1.0/auth/token',
+  authURL: 'https://yce-api-01.perfectcorp.com/s2s/v1.0/client/auth',
   clientId: process.env.REACT_APP_PERFECT_CORP_CLIENT_ID,
   clientSecret: process.env.REACT_APP_PERFECT_CORP_CLIENT_SECRET,
   timeout: 30000,
@@ -120,62 +120,84 @@ class PerfectCorpAPIService {
   }
 
   async generateIdToken() {
-    try {
-      if (!this.isInitialized) {
-        await this.initialize();
-      }
+  try {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
 
-      if (this.useMockAPI) {
-        return 'mock_id_token_' + Date.now();
-      }
+    if (this.useMockAPI) {
+      return 'mock_id_token_' + Date.now();
+    }
 
-      const timestamp = Date.now();
-      
-      const header = {
-        alg: "HS256",
-        typ: "JWT"
-      };
-
-      const payload = {
-        client_id: API_CONFIG.clientId,
-        timestamp: timestamp,
-        iat: Math.floor(timestamp / 1000),
-        exp: Math.floor(timestamp / 1000) + 3600
-      };
-
-      const encodedHeader = base64UrlEncode(header);
-      const encodedPayload = base64UrlEncode(payload);
-      const signingInput = `${encodedHeader}.${encodedPayload}`;
-
-      const signature = btoa(signingInput + API_CONFIG.clientSecret).substring(0, 43);
-      
-      return `${signingInput}.${signature}`;
-
-    } catch (error) {
+    // 檢查環境變數
+    if (!API_CONFIG.clientId || !API_CONFIG.clientSecret) {
       throw new PerfectCorpAPIError(
-        'Failed to generate authentication token', 
-        'TOKEN_GENERATION_ERROR', 
-        error
+        'Missing API credentials. Please check REACT_APP_PERFECT_CORP_CLIENT_ID and REACT_APP_PERFECT_CORP_CLIENT_SECRET',
+        'MISSING_CREDENTIALS'
       );
     }
+
+    const timestamp = Date.now();
+    const dataToEncrypt = `client_id=${API_CONFIG.clientId}&timestamp=${timestamp}`;
+    
+    // 使用 Perfect Corp 要求的 RSA 加密方式
+    // 注意：瀏覽器環境中的 RSA 加密實現
+    try {
+      // 導入 JSEncrypt 庫來處理 RSA 加密
+      const { JSEncrypt } = await import('jsencrypt');
+      
+      const encrypt = new JSEncrypt();
+      encrypt.setPublicKey(API_CONFIG.clientSecret);
+      const encrypted = encrypt.encrypt(dataToEncrypt);
+      
+      if (!encrypted) {
+        throw new Error('RSA encryption failed');
+      }
+      
+      return encrypted;
+    } catch (encryptError) {
+      console.error('RSA encryption error:', encryptError);
+      throw new PerfectCorpAPIError(
+        'Failed to encrypt authentication data',
+        'ENCRYPTION_ERROR',
+        encryptError
+      );
+    }
+
+  } catch (error) {
+    throw new PerfectCorpAPIError(
+      'Failed to generate authentication token', 
+      'TOKEN_GENERATION_ERROR', 
+      error
+    );
+  }
   }
 
   async getAccessToken() {
     try {
       if (this.useMockAPI) {
+        console.log('🧪 [MOCK MODE] 回傳模擬 access token');
         return 'mock_access_token_' + Date.now();
       }
 
+      // 檢查 token 是否還有效
       if (this.accessToken && this.tokenExpiryTime && Date.now() < this.tokenExpiryTime) {
+        console.log('✅ [TOKEN CACHE] 使用現有的 access token');
         return this.accessToken;
       }
 
+      console.log('🔐 [AUTH] 開始 PerfectCorp API 認證流程');
+      
       const idToken = await this.generateIdToken();
+      console.log('🎫 [ID_TOKEN] 生成的 id_token:', idToken);
       
       const requestBody = {
         client_id: API_CONFIG.clientId,
         id_token: idToken
       };
+      
+      console.log('📤 [REQUEST] 發送認證請求到:', API_CONFIG.authURL);
+      console.log('📤 [REQUEST BODY]:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch(API_CONFIG.authURL, {
         method: 'POST',
@@ -188,8 +210,14 @@ class PerfectCorpAPIService {
         signal: AbortSignal.timeout(API_CONFIG.timeout)
       });
 
+      console.log('📊 [RESPONSE] HTTP 狀態碼:', response.status);
+      console.log('📊 [RESPONSE] Headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('❌ [AUTH ERROR] 認證失敗');
+        console.error('❌ [ERROR RESPONSE]:', errorText);
+        
         throw new PerfectCorpAPIError(
           `Authentication failed: HTTP ${response.status}`,
           'AUTH_ERROR',
@@ -199,7 +227,11 @@ class PerfectCorpAPIService {
 
       const data = await response.json();
       
+      console.log('✅ [SUCCESS] PerfectCorp API 認證回傳數據:');
+      console.log('🔍 [FULL RESPONSE]:', JSON.stringify(data, null, 2));
+      
       if (data.status !== 200 || !data.result?.access_token) {
+        console.error('❌ [INVALID RESPONSE] 回傳格式錯誤:', data);
         throw new PerfectCorpAPIError(
           'Invalid authentication response format', 
           'AUTH_RESPONSE_ERROR', 
@@ -208,11 +240,16 @@ class PerfectCorpAPIService {
       }
 
       this.accessToken = data.result.access_token;
-      this.tokenExpiryTime = Date.now() + (50 * 60 * 1000);
+      this.tokenExpiryTime = Date.now() + (110 * 60 * 1000);
+      
+      console.log('🎟️ [ACCESS TOKEN] 獲得 access_token:', this.accessToken);
+      console.log('⏰ [TOKEN EXPIRY] Token 過期時間:', new Date(this.tokenExpiryTime).toLocaleString());
       
       return this.accessToken;
 
     } catch (error) {
+      console.error('💥 [AUTH EXCEPTION] 認證過程發生異常:', error);
+      
       if (error instanceof PerfectCorpAPIError) {
         throw error;
       }
@@ -227,8 +264,14 @@ class PerfectCorpAPIService {
 
   async makeAPIRequest(endpoint, options = {}) {
     if (this.useMockAPI) {
-      return this.mockAPIResponse(endpoint, options);
+      console.log('🧪 [MOCK MODE] 使用模擬 API 響應');
+      const mockResponse = this.mockAPIResponse(endpoint, options);
+      console.log('🧪 [MOCK RESPONSE]:', mockResponse);
+      return mockResponse;
     }
+
+    console.log(`🌐 [API REQUEST] 發送請求到端點: ${endpoint}`);
+    console.log(`🌐 [REQUEST OPTIONS]:`, JSON.stringify(options, null, 2));
 
     const accessToken = await this.getAccessToken();
     
@@ -243,41 +286,61 @@ class PerfectCorpAPIService {
 
     const finalOptions = { ...defaultOptions, ...options };
     const url = `${API_CONFIG.baseURL}${endpoint}`;
+    
+    console.log(`📍 [FULL URL]:`, url);
+    console.log(`📋 [FINAL OPTIONS]:`, JSON.stringify(finalOptions, null, 2));
 
     for (let attempt = 1; attempt <= API_CONFIG.retryAttempts; attempt++) {
       try {
+        console.log(`🔄 [ATTEMPT ${attempt}] 嘗試第 ${attempt} 次請求`);
+        
         const response = await fetch(url, finalOptions);
+        
+        console.log(`📊 [RESPONSE ${attempt}] HTTP 狀態碼:`, response.status);
+        console.log(`📊 [RESPONSE ${attempt}] Headers:`, Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
           const errorText = await response.text();
-          throw new PerfectCorpAPIError(
-            `API request failed: ${response.status}`,
-            'API_ERROR',
-            errorText
-          );
+          console.error(`❌ [ERROR ${attempt}] API 請求失敗:`);
+          console.error(`❌ [ERROR RESPONSE ${attempt}]:`, errorText);
+          
+          if (attempt === API_CONFIG.retryAttempts) {
+            throw new PerfectCorpAPIError(
+              `API request failed: HTTP ${response.status}`,
+              'API_REQUEST_ERROR',
+              { status: response.status, body: errorText, attempt }
+            );
+          }
+          
+          console.log(`🔄 [RETRY] 等待重試... (${attempt}/${API_CONFIG.retryAttempts})`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          continue;
         }
 
-        const data = await response.json();
+        const responseData = await response.json();
         
-        if (data.status && data.status !== 200) {
-          throw new PerfectCorpAPIError(
-            data.error || 'API returned error status',
-            data.error_code || 'API_STATUS_ERROR',
-            data
-          );
-        }
-
-        return data;
+        console.log(`✅ [SUCCESS ${attempt}] API 請求成功!`);
+        console.log(`🔍 [RESPONSE DATA ${attempt}]:`, JSON.stringify(responseData, null, 2));
+        
+        return responseData;
+        
       } catch (error) {
+        console.error(`💥 [EXCEPTION ${attempt}] 請求發生異常:`, error);
+        
         if (attempt === API_CONFIG.retryAttempts) {
-          if (error instanceof PerfectCorpAPIError) throw error;
-          throw new PerfectCorpAPIError('API request failed after retries', 'NETWORK_ERROR', error);
+          throw new PerfectCorpAPIError(
+            'API request network error',
+            'API_NETWORK_ERROR',
+            error
+          );
         }
         
+        console.log(`🔄 [RETRY] 等待重試... (${attempt}/${API_CONFIG.retryAttempts})`);
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
       }
     }
   }
+
 
   mockAPIResponse(endpoint, options) {
     console.log(`🧪 Mock API call: ${endpoint}`);
@@ -351,86 +414,56 @@ class PerfectCorpAPIService {
     }
   }
 
-  async uploadImage(file) {
-    try {
-      this.validateImageFile(file);
+  async uploadImage(imageFile) {
+  console.log('📤 [UPLOAD] 開始上傳圖片');
+  console.log('📤 [IMAGE INFO]:', {
+    name: imageFile.name,
+    size: imageFile.size,
+    type: imageFile.type
+  });
 
-      if (this.useMockAPI) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return 'mock_file_id_' + Date.now();
-      }
+  if (this.useMockAPI) {
+    console.log('🧪 [MOCK UPLOAD] 模擬上傳，回傳假的檔案 ID');
+    return `mock_file_id_${Date.now()}`;
+  }
 
-      const uploadRequest = await this.makeAPIRequest('/file/skin-analysis', {
-        method: 'POST',
-        body: JSON.stringify({
-          files: [{
-            content_type: file.type,
-            file_name: file.name,
-            file_size: file.size
-          }]
-        })
-      });
+  // 實際上傳邏輯...
+  const response = await this.makeAPIRequest('/upload', {
+    method: 'POST',
+    body: imageFile
+  });
 
-      const fileInfo = uploadRequest.result.files[0];
-      const uploadURL = fileInfo.requests[0].url;
-      const headers = fileInfo.requests[0].headers;
-
-      const uploadResponse = await fetch(uploadURL, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': file.type,
-          'Content-Length': file.size.toString(),
-          ...headers
-        },
-        body: file,
-        signal: AbortSignal.timeout(API_CONFIG.timeout)
-      });
-
-      if (!uploadResponse.ok) {
-        throw new PerfectCorpAPIError(
-          `Image upload failed: ${uploadResponse.status}`,
-          'UPLOAD_ERROR'
-        );
-      }
-
-      return fileInfo.file_id;
-    } catch (error) {
-      if (error instanceof PerfectCorpAPIError) throw error;
-      throw new PerfectCorpAPIError('Image upload failed', 'UPLOAD_NETWORK_ERROR', error);
-    }
+  console.log('✅ [UPLOAD SUCCESS] 圖片上傳成功:', response);
+  return response.file_id;
   }
 
   async startSkinAnalysis(fileId, analysisType = 'HD') {
-    try {
-      if (this.useMockAPI) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return 'mock_task_' + Date.now();
-      }
+    console.log('🔬 [ANALYSIS] 開始肌膚分析');
+    console.log('🔬 [ANALYSIS PARAMS]:', { fileId, analysisType });
 
-      const actions = analysisType === 'HD' 
-        ? SKIN_ANALYSIS_CONFIG.HD_ACTIONS 
-        : SKIN_ANALYSIS_CONFIG.SD_ACTIONS;
-
-      const response = await this.makeAPIRequest('/task/skin-analysis', {
-        method: 'POST',
-        body: JSON.stringify({
-          request_id: 0,
-          payload: {
-            file_sets: { src_ids: [fileId] },
-            actions: [{
-              id: 0,
-              params: {},
-              dst_actions: actions
-            }]
-          }
-        })
-      });
-
-      return response.result.task_id;
-    } catch (error) {
-      if (error instanceof PerfectCorpAPIError) throw error;
-      throw new PerfectCorpAPIError('Failed to start skin analysis', 'ANALYSIS_START_ERROR', error);
+    if (this.useMockAPI) {
+      console.log('🧪 [MOCK ANALYSIS] 模擬分析，回傳假的任務 ID');
+      return `mock_task_id_${Date.now()}`;
     }
+
+    const analysisActions = analysisType === 'HD' ? 
+      SKIN_ANALYSIS_CONFIG.HD_ACTIONS : 
+      SKIN_ANALYSIS_CONFIG.SD_ACTIONS;
+
+    const requestBody = {
+      file_id: fileId,
+      actions: analysisActions
+    };
+
+    console.log('🔬 [ANALYSIS REQUEST]:', JSON.stringify(requestBody, null, 2));
+
+    const response = await this.makeAPIRequest('/task/ai-skin-analysis', {
+      method: 'POST',
+      body: JSON.stringify(requestBody)
+    });
+
+    console.log('✅ [ANALYSIS STARTED] 分析任務已啟動:', response);
+    return response.task_id;
   }
 
   async getAnalysisStatus(taskId) {
@@ -462,43 +495,73 @@ class PerfectCorpAPIService {
   }
 
   async pollAnalysisResult(taskId, onProgress = null) {
-    const maxAttempts = 60;
-    let attempts = 0;
+    console.log('⏳ [POLLING] 開始輪詢分析結果');
+    console.log('⏳ [TASK ID]:', taskId);
 
-    while (attempts < maxAttempts) {
+    if (this.useMockAPI) {
+      console.log('🧪 [MOCK POLLING] 模擬輪詢過程');
+      
+      // 模擬輪詢過程
+      for (let i = 1; i <= 3; i++) {
+        console.log(`🧪 [MOCK POLL ${i}] 模擬輪詢第 ${i} 次`);
+        onProgress?.({ attempts: i, maxAttempts: 3 });
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      const mockResult = this.generateMockAnalysisResult();
+      console.log('🧪 [MOCK RESULT] 模擬分析結果:', mockResult);
+      return mockResult;
+    }
+
+    const maxAttempts = 30;
+    const pollInterval = 2000; // 2 秒
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      console.log(`🔍 [POLL ${attempt}] 第 ${attempt} 次輪詢 (最多 ${maxAttempts} 次)`);
+      
       try {
-        const status = await this.getAnalysisStatus(taskId);
+        const response = await this.makeAPIRequest(`/task/ai-skin-analysis?task_id=${taskId}`);
         
-        if (onProgress) {
-          onProgress({
-            status: status.status,
-            attempts: attempts + 1,
-            maxAttempts
-          });
+        console.log(`📊 [POLL RESPONSE ${attempt}]:`, JSON.stringify(response, null, 2));
+        
+        onProgress?.({ attempts: attempt, maxAttempts });
+
+        if (response.status === 'success') {
+          console.log('🎉 [ANALYSIS COMPLETE] 分析完成!');
+          console.log('🔍 [FINAL RESULT]:', JSON.stringify(response.result, null, 2));
+          return this.formatAnalysisResult(response.result);
         }
 
-        if (status.status === 'success') {
-          return this.processAnalysisResult(status);
-        }
-        
-        if (status.status === 'error') {
+        if (response.status === 'error') {
+          console.error('❌ [ANALYSIS ERROR] 分析失敗:', response.error);
           throw new PerfectCorpAPIError(
-            status.error_message || 'Analysis failed',
-            status.error || 'ANALYSIS_ERROR'
+            `Analysis failed: ${response.error}`,
+            'ANALYSIS_ERROR',
+            response
           );
         }
 
-        const pollingInterval = status.polling_interval || 2000;
-        await new Promise(resolve => setTimeout(resolve, pollingInterval));
-        
-        attempts++;
+        console.log(`⏳ [WAITING] 分析進行中，${pollInterval/1000} 秒後重試...`);
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+
       } catch (error) {
-        if (error instanceof PerfectCorpAPIError) throw error;
-        throw new PerfectCorpAPIError('Polling failed', 'POLLING_ERROR', error);
+        console.error(`💥 [POLL ERROR ${attempt}] 輪詢發生錯誤:`, error);
+        
+        if (attempt === maxAttempts) {
+          throw new PerfectCorpAPIError(
+            'Analysis polling timeout',
+            'ANALYSIS_TIMEOUT',
+            error
+          );
+        }
       }
     }
 
-    throw new PerfectCorpAPIError('Analysis timeout', 'ANALYSIS_TIMEOUT');
+    throw new PerfectCorpAPIError(
+      'Analysis timeout - exceeded maximum polling attempts',
+      'ANALYSIS_TIMEOUT',
+      { maxAttempts, taskId }
+    );
   }
 
   async processAnalysisResult(statusResult) {
@@ -782,29 +845,39 @@ class PerfectCorpAPIService {
   }
 
   async getUserQuota() {
+    console.log('💰 [QUOTA] 檢查用戶額度');
+    
     try {
       if (this.useMockAPI) {
-        return {
+        const mockQuota = {
           available: true,
           remaining: 100,
           total: 100,
           type: 'mock'
         };
+        console.log('🧪 [MOCK QUOTA]:', mockQuota);
+        return mockQuota;
       }
 
       const quotaInfo = await this.makeAPIRequest('/client/credit');
+      console.log('📊 [QUOTA RESPONSE]:', JSON.stringify(quotaInfo, null, 2));
       
       const totalCredits = quotaInfo.results.reduce((sum, credit) => sum + credit.amount, 0);
       
-      return {
+      const quota = {
         available: totalCredits > 0,
         remaining: totalCredits,
         total: totalCredits,
         type: 'real',
         details: quotaInfo.results
       };
+      
+      console.log('💰 [FINAL QUOTA]:', quota);
+      return quota;
+      
     } catch (error) {
-      console.warn('Failed to get user quota:', error);
+      console.error('❌ [QUOTA ERROR] 獲取額度失敗:', error);
+      
       return {
         available: false,
         remaining: 0,

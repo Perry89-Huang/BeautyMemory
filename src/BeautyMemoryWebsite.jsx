@@ -1,6 +1,4 @@
-/**
- * 分析中區域
- */
+import perfectCorpAPI from './services/perfectCorpAPI';
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   BiCamera, 
@@ -306,55 +304,73 @@ const BeautyMemoryWebsite = () => {
   // 模擬 API 狀態檢查
   useEffect(() => {
     const checkAPIStatus = async () => {
-      const allowMock = process.env.REACT_APP_ENABLE_MOCK_API !== 'false';
-      
+  const allowMock = process.env.REACT_APP_ENABLE_MOCK_API !== 'false';
+  
+  setApiStatus({ 
+    isDemo: false, 
+    checking: true, 
+    message: '正在檢查 Perfect Corp API 連接...',
+    allowMock 
+  });
+  
+  try {
+    // 檢查環境變數
+    const hasClientId = !!process.env.REACT_APP_PERFECT_CORP_CLIENT_ID;
+    const hasClientSecret = !!process.env.REACT_APP_PERFECT_CORP_CLIENT_SECRET;
+    
+    if (!hasClientId || !hasClientSecret) {
+      throw new Error('Missing API credentials in environment variables');
+    }
+    
+    // 嘗試進行認證測試
+    //const perfectCorpAPI = new PerfectCorpAPIService();
+    await perfectCorpAPI.initialize();
+    
+    if (perfectCorpAPI.useMockAPI) {
+      throw new Error('API service initialized in mock mode');
+    }
+    
+    // 嘗試獲取 access token
+    await perfectCorpAPI.getAccessToken();
+    
+    // 如果成功，設置 API 可用
+    setApiStatus({ 
+      isDemo: false, 
+      checking: false, 
+      available: true,
+      message: 'Perfect Corp API 連接成功',
+      allowMock
+    });
+    
+    showNotification('Perfect Corp API 連接成功！', 'success');
+    
+  } catch (error) {
+    console.log('API 連接檢查結果:', error.message);
+    
+    if (allowMock) {
+      // 允許演示模式，切換到演示模式
+      setApiStatus({ 
+        isDemo: true, 
+        checking: false, 
+        available: false,
+        message: 'API 連接失敗，已切換到演示模式',
+        error: error.message,
+        allowMock
+      });
+      showNotification('Perfect Corp API 暫時不可用，已切換到演示模式體驗', 'info');
+    } else {
+      // 不允許演示模式，顯示錯誤
       setApiStatus({ 
         isDemo: false, 
-        checking: true, 
-        message: '正在檢查 Perfect Corp API 連接...',
-        allowMock 
+        checking: false, 
+        available: false,
+        message: 'Perfect Corp API 連接失敗',
+        error: error.message,
+        allowMock
       });
-      
-      // 模擬檢查過程
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // 這裡可以嘗試真實的 API 連接
-      try {
-        // 模擬 API 請求 - 這裡可以替換為真實的 Perfect Corp API 測試
-        const response = await fetch('https://yce-api-01.perfectcorp.com/s2s/v1.0/client/credit', {
-          method: 'HEAD', // 使用 HEAD 請求只檢查連接性
-          mode: 'no-cors'
-        });
-        
-        // 如果到達這裡，API 可能可用（但由於 CORS 我們無法確定）
-        throw new Error('Perfect Corp API 連接測試失敗');
-        
-      } catch (error) {
-        console.log('API 連接檢查結果:', error.message);
-        
-        if (allowMock) {
-          // 允許演示模式，切換到演示模式
-          setApiStatus({ 
-            isDemo: true, 
-            checking: false, 
-            message: 'API 連接失敗，已切換到演示模式',
-            error: error.message,
-            allowMock
-          });
-          showNotification('Perfect Corp API 暫時不可用，已切換到演示模式體驗', 'info');
-        } else {
-          // 不允許演示模式，顯示錯誤
-          setApiStatus({ 
-            isDemo: false, 
-            checking: false, 
-            available: false,
-            message: 'Perfect Corp API 連接失敗',
-            error: error.message,
-            allowMock
-          });
-          showNotification('Perfect Corp API 連接失敗，請檢查網絡連接或聯繫技術支援', 'error');
-        }
-      }
+      showNotification('Perfect Corp API 連接失敗，請檢查 API 金鑰設定', 'error');
+    }
+  }
     };
 
     checkAPIStatus();
@@ -1498,6 +1514,7 @@ const StepIndicatorCard = ({ step, index, activeStep }) => {
     </div>
   );
 };
+
 
 /**
  * 模態框內容
