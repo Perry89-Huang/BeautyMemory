@@ -508,16 +508,13 @@ const SkinAnalysis = () => {
           <h1 className="text-4xl font-bold text-slate-800 mb-4">
             AI 智能肌膚檢測系統
           </h1>
-          <p className="text-slate-600 text-lg">
-            Perfect Corp 風格實現 • 九紫離火運加持 • 專業美肌檢測
-          </p>
         </div>
 
         {/* API 狀態指示器 */}
         <div className={`mb-6 p-3 rounded-lg text-center ${
           apiStatus.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
         }`}>
-          <p className="text-sm font-medium">{apiStatus.message}</p>
+          <p className="text-sm font-medium">九紫離火運加持 • 專業美肌檢測</p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
@@ -527,7 +524,7 @@ const SkinAnalysis = () => {
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-purple-100">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <FiCamera className="w-5 h-5 text-purple-600" />
-                Perfect Corp 風格攝像頭
+                攝像頭
                 {(cameraLoading || captureInProgress) && (
                   <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin ml-2" />
                 )}
@@ -544,11 +541,9 @@ const SkinAnalysis = () => {
                     <div className="text-center">
                       <FiCamera className="w-16 h-16 text-slate-400 mx-auto mb-4" />
                       <p className="text-slate-600 mb-3 font-medium">
-                        點擊開啟 Perfect Corp 風格攝像頭
+                        點擊開啟 攝像頭
                       </p>
-                      <p className="text-sm text-slate-500">
-                        採用官方網站同等級技術架構
-                      </p>
+                      
                       {cameraLoading && (
                         <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mt-2" />
                       )}
@@ -702,7 +697,7 @@ const SkinAnalysis = () => {
                     className="col-span-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
                   >
                     <FiPlay className="w-5 h-5" />
-                    {cameraLoading ? '啟動攝像頭...' : '開啟 Perfect Corp 攝像頭'}
+                    {cameraLoading ? '啟動攝像頭...' : '開啟 攝像頭'}
                   </button>
                 ) : (
                   <>
@@ -840,34 +835,7 @@ const SkinAnalysis = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
-                  <h4 className="font-semibold text-green-800 mb-2">✅ 無衝突解決方案</h4>
-                  <p className="text-green-700 text-sm mb-2">
-                    採用原生攝像頭 + AI 算法，完全避免 YMK SDK 與 React 的衝突問題。
-                  </p>
-                  <div className="text-xs text-green-600 space-y-1">
-                    <div>• 原生 MediaDevices API：穩定可靠的攝像頭控制</div>
-                    <div>• Canvas 圖像處理：高品質圖像擷取和處理</div>
-                    <div>• AI 模擬檢測：智能面部品質監控</div>
-                    <div>• 九紫離火運算法：風水能量加持分析</div>
-                  </div>
-                </div>
 
-                <div className="mt-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-200">
-                  <h4 className="font-semibold text-red-800 mb-2">🔮 九紫離火運特別提醒</h4>
-                  <p className="text-red-700 text-sm">
-                    2025年進入九紫離火運，此時進行肌膚檢測能獲得最精準的分析結果。
-                    建議在日照充足的午時（11:00-13:00）進行檢測，火運能量最旺盛。
-                  </p>
-                </div>
-
-                <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
-                  <h4 className="font-semibold text-amber-800 mb-2">💡 技術說明</h4>
-                  <p className="text-amber-700 text-sm">
-                    為避免 YMK SDK 的 React 衝突問題，本系統採用原生技術棧，
-                    提供同等專業的肌膚檢測功能，確保穩定可靠的用戶體驗。
-                  </p>
-                </div>
               </div>
             )}
           </div>
@@ -875,9 +843,7 @@ const SkinAnalysis = () => {
 
         {/* 底部說明 */}
         <div className="mt-8 text-center text-sm text-slate-500 space-y-2">
-          <p>
-            本系統採用原生攝像頭 + AI 算法，避免第三方 SDK 衝突問題
-          </p>
+          
           <p>
             提供專業級面部檢測、品質監控和肌膚分析功能
           </p>
