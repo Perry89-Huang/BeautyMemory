@@ -17,7 +17,7 @@ import {
   BiTrendingUp
 } from 'react-icons/bi';
 
-const YMKSkinAnalysis = () => {
+const SkinAnalysis = () => {
   // 攝像頭狀態
   const [cameraOpened, setCameraOpened] = useState(false);
   const [cameraLoading, setCameraLoading] = useState(false);
@@ -887,32 +887,34 @@ const YMKSkinAnalysis = () => {
         </div>
       </div>
 
-      {/* 技術狀態提示 */}
-      <div className="fixed bottom-4 left-4 bg-slate-100 border border-slate-300 rounded-lg p-3 max-w-xs text-xs">
-        <div className="font-medium text-slate-800 mb-2">系統狀態</div>
-        <div className="space-y-1 text-slate-600">
-          <div className="flex justify-between">
-            <span>攝像頭:</span>
-            <span className={cameraOpened ? 'text-green-600' : 'text-slate-500'}>
-              {cameraOpened ? '✓ 原生模式' : '○ 待命'}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>AI 分析:</span>
-            <span className="text-green-600">✓ 就緒</span>
-          </div>
-          <div className="flex justify-between">
-            <span>React:</span>
-            <span className="text-green-600">✓ 無衝突</span>
-          </div>
-          <div className="flex justify-between">
-            <span>九運:</span>
-            <span className="text-red-600">🔥 加持中</span>
+      {/* 技術狀態提示 - 隱藏 */}
+      {false && (
+        <div className="fixed bottom-4 left-4 bg-slate-100 border border-slate-300 rounded-lg p-3 max-w-xs text-xs">
+          <div className="font-medium text-slate-800 mb-2">系統狀態</div>
+          <div className="space-y-1 text-slate-600">
+            <div className="flex justify-between">
+              <span>攝像頭:</span>
+              <span className={cameraOpened ? 'text-green-600' : 'text-slate-500'}>
+                {cameraOpened ? '✓ 原生模式' : '○ 待命'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>AI 分析:</span>
+              <span className="text-green-600">✓ 就緒</span>
+            </div>
+            <div className="flex justify-between">
+              <span>React:</span>
+              <span className="text-green-600">✓ 無衝突</span>
+            </div>
+            <div className="flex justify-between">
+              <span>九運:</span>
+              <span className="text-red-600">🔥 加持中</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
 
-export default YMKSkinAnalysis;
+export default SkinAnalysis;
