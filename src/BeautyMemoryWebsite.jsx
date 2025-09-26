@@ -126,11 +126,13 @@ const SkinAnalysis = ({ isModal = false }) => {
 
   const [fengShuiTiming] = useState(getCurrentFengShuiTiming());
 
-  // Perfect Corp 面部品質檢測
+  // Perfect Corp 面部品質檢測 - 加強手機版本
   useEffect(() => {
     if (!cameraOpened) return;
 
     const qualityInterval = setInterval(() => {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      
       const perfectCorpQuality = {
         hasFace: Math.random() > 0.2,
         area: Math.random() > 0.3 ? 'good' : 'needs_adjustment',
@@ -139,7 +141,10 @@ const SkinAnalysis = ({ isModal = false }) => {
         eye_detection: Math.random() > 0.4 ? 'detected' : 'not_detected',
         mouth_detection: Math.random() > 0.4 ? 'detected' : 'not_detected',
         skin_visibility: Math.random() > 0.3 ? 'sufficient' : 'insufficient',
-        image_sharpness: Math.random() > 0.4 ? 'sharp' : 'blurry'
+        image_sharpness: Math.random() > 0.4 ? 'sharp' : 'blurry',
+        // 新增手機專用的距離檢測
+        distance: isMobile ? (Math.random() > 0.4 ? 'optimal' : Math.random() > 0.5 ? 'too_close' : 'too_far') : 'good',
+        face_size: isMobile ? (Math.random() > 0.3 ? 'good' : Math.random() > 0.5 ? 'too_large' : 'too_small') : 'good'
       };
       
       setMockFaceQuality(perfectCorpQuality);
@@ -283,7 +288,6 @@ const SkinAnalysis = ({ isModal = false }) => {
     } finally {
       setIsAnalyzing(false);
       setCaptureInProgress(false);
-      // 移除這裡的 closeCamera()，因為已經在拍照後關閉了
     }
   };
   
@@ -561,8 +565,8 @@ const SkinAnalysis = ({ isModal = false }) => {
 
           {/* 攝像頭視窗 */}
           <div className="relative bg-black rounded-xl overflow-hidden" style={{ 
-            aspectRatio: window.innerWidth < 768 ? '3/4' : '16/9',
-            maxHeight: window.innerWidth < 768 ? '75vh' : '60vh'
+            aspectRatio: typeof window !== 'undefined' && window.innerWidth < 768 ? '3/4' : '16/9',
+            maxHeight: typeof window !== 'undefined' && window.innerWidth < 768 ? '75vh' : '60vh'
           }}>
             {cameraOpened ? (
               <>
@@ -573,8 +577,8 @@ const SkinAnalysis = ({ isModal = false }) => {
                   muted
                   className="w-full h-full object-cover"
                   style={{ 
-                    transform: window.innerWidth < 768 
-                      ? 'scaleX(-1) scale(1.3)'
+                    transform: typeof window !== 'undefined' && window.innerWidth < 768 
+                      ? 'scaleX(-1) scale(0.85)'  // 手機上縮小比例，讓臉部更容易適應
                       : 'scaleX(-1) scale(1.1)',
                     objectPosition: 'center center'
                   }}
@@ -587,22 +591,49 @@ const SkinAnalysis = ({ isModal = false }) => {
                 {/* 面部檢測覆層 */}
                 {mockFaceQuality && (
                   <div className="absolute inset-0 pointer-events-none">
-                    {/* 距離提示 */}
+                    {/* 距離提示 - 針對手機優化 */}
                     {mockFaceQuality.hasFace && mockFaceQuality.area !== 'good' && (
                       <div className="absolute top-4 left-4 right-4 text-center">
                         <div className="bg-yellow-500/90 backdrop-blur-sm rounded-lg py-2 px-3 inline-block">
                           <p className="text-white text-sm font-medium">
-                            📏 請調整距離，讓臉部填滿掃描框
+                            {typeof window !== 'undefined' && window.innerWidth < 768 ? (
+                              mockFaceQuality.face_size === 'too_large' ? '📱 臉部太大了！請將手機拉遠一些' :
+                              mockFaceQuality.face_size === 'too_small' ? '📱 臉部太小了！請將手機靠近一些' :
+                              mockFaceQuality.distance === 'too_close' ? '📱 距離太近！請後退 10-15 公分' :
+                              mockFaceQuality.distance === 'too_far' ? '📱 距離太遠！請前進 5-10 公分' :
+                              '📱 請調整位置，讓臉部完全在橢圓框內'
+                            ) : (
+                              '🔍 請調整距離，讓臉部填滿掃描框'
+                            )}
                           </p>
                         </div>
                       </div>
                     )}
                     
-                    {/* 掃描框 */}
+                    {/* 手機專用距離指示器 */}
+                    {typeof window !== 'undefined' && window.innerWidth < 768 && mockFaceQuality.hasFace && (
+                      <div className="absolute top-16 left-4 right-4 text-center">
+                        <div className="bg-black/50 backdrop-blur-sm rounded-lg py-1 px-3 inline-block">
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="text-white text-xs">距離:</span>
+                            <div className={`w-3 h-3 rounded-full ${
+                              mockFaceQuality.distance === 'optimal' ? 'bg-green-400' :
+                              mockFaceQuality.distance === 'too_close' ? 'bg-red-400' : 'bg-yellow-400'
+                            } animate-pulse`} />
+                            <span className="text-white text-xs">
+                              {mockFaceQuality.distance === 'optimal' ? '完美' :
+                               mockFaceQuality.distance === 'too_close' ? '太近' : '太遠'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* 掃描框 - 手機上使用更大的框 */}
                     {mockFaceQuality.hasFace && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="relative">
-                          <div className={`${window.innerWidth < 768 ? 'w-48 h-60' : 'w-64 h-80'} border-2 border-purple-400 rounded-[50%] animate-pulse`} />
+                          <div className={`${typeof window !== 'undefined' && window.innerWidth < 768 ? 'w-56 h-72' : 'w-64 h-80'} border-2 border-purple-400 rounded-[50%] animate-pulse`} />
                           
                           <div className="absolute top-[30%] left-0 right-0 border-t border-purple-300/50 border-dashed">
                             <span className="absolute -top-3 -left-12 text-xs text-purple-300">眼睛</span>
@@ -660,7 +691,7 @@ const SkinAnalysis = ({ isModal = false }) => {
                       </div>
                     </div>
                     
-                    {/* 未檢測到臉部提示 */}
+                    {/* 未檢測到臉部提示 - 手機優化版本 */}
                     {!mockFaceQuality.hasFace && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center p-6 bg-black/70 backdrop-blur-sm rounded-2xl mx-4">
@@ -669,8 +700,17 @@ const SkinAnalysis = ({ isModal = false }) => {
                             請將臉部對準畫面中央
                           </p>
                           <p className="text-white/80 text-sm">
-                            保持約 30-40 公分距離<br/>
-                            確保光線充足，正面面對攝像頭
+                            {typeof window !== 'undefined' && window.innerWidth < 768 ? (
+                              <>
+                                手機距離臉部 40-50 公分<br/>
+                                垂直持握手機，確保光線充足
+                              </>
+                            ) : (
+                              <>
+                                保持約 30-40 公分距離<br/>
+                                確保光線充足，正面面對攝像頭
+                              </>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -684,14 +724,15 @@ const SkinAnalysis = ({ isModal = false }) => {
                   <FiCamera className="w-16 h-16 text-purple-400 mx-auto mb-4" />
                   <p className="text-purple-600 font-medium text-lg">攝像頭未開啟</p>
                   <p className="text-sm text-purple-500 mt-2">點擊下方按鈕開始分析</p>
-                  {window.innerWidth < 768 && (
+                  {typeof window !== 'undefined' && window.innerWidth < 768 && (
                     <div className="mt-4 p-3 bg-purple-50 rounded-lg">
-                      <p className="text-xs text-purple-600">💡 最佳拍攝提示：</p>
+                      <p className="text-xs text-purple-600">💡 手機拍攝優化提示：</p>
                       <ul className="text-xs text-purple-500 mt-2 text-left">
-                        <li>• 手機距離臉部 30-40 公分</li>
-                        <li>• 垂直握持手機</li>
-                        <li>• 在明亮環境下拍攝</li>
-                        <li>• 正面面對攝像頭</li>
+                        <li>• 手機距離臉部 40-50 公分（比平時自拍遠一些）</li>
+                        <li>• 垂直持握手機</li>
+                        <li>• 選擇光線明亮的環境</li>
+                        <li>• 正面面對前置攝像頭</li>
+                        <li>• 確保整張臉都在橢圓框內</li>
                       </ul>
                     </div>
                   )}
@@ -717,7 +758,7 @@ const SkinAnalysis = ({ isModal = false }) => {
                   disabled={captureInProgress || !mockFaceQuality?.hasFace}
                   className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-medium hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50"
                 >
-                  {captureInProgress ? '拍照中...' : '拍照分析'}
+                  {captureInProgress ? '分析中...' : '拍照分析'}
                 </button>
                 <button
                   onClick={closeCamera}
@@ -730,188 +771,6 @@ const SkinAnalysis = ({ isModal = false }) => {
           </div>
         </div>
       )}
-            <>
-              <video 
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-                style={{ 
-                  transform: window.innerWidth < 768 
-                    ? 'scaleX(-1) scale(1.3)'  // 手機上放大 1.3 倍，讓臉部更大
-                    : 'scaleX(-1) scale(1.1)', // 桌面上略微放大
-                  objectPosition: 'center center'
-                }}
-                onLoadedMetadata={(e) => {
-                  e.target.play().catch(err => console.error('播放失敗:', err));
-                }}
-              />
-              <canvas ref={canvasRef} className="hidden" />
-              
-              {/* 面部檢測覆層 */}
-              {mockFaceQuality && (
-                <div className="absolute inset-0 pointer-events-none">
-                  {/* 距離提示 - 根據臉部大小給出提示 */}
-                  {mockFaceQuality.hasFace && mockFaceQuality.area !== 'good' && (
-                    <div className="absolute top-4 left-4 right-4 text-center">
-                      <div className="bg-yellow-500/90 backdrop-blur-sm rounded-lg py-2 px-3 inline-block">
-                        <p className="text-white text-sm font-medium">
-                          {mockFaceQuality.area === 'needs_adjustment' 
-                            ? '📏 請調整距離，讓臉部填滿掃描框' 
-                            : '📏 請靠近或遠離攝像頭'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 掃描框 - 調整大小以配合常見的手機自拍距離 */}
-                  {mockFaceQuality.hasFace && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="relative">
-                        {/* 主掃描框 - 根據裝置調整大小 */}
-                        <div 
-                          className={`
-                            ${window.innerWidth < 768 
-                              ? 'w-48 h-60'  // 手機：較小的掃描框（約佔螢幕寬度的 60%）
-                              : 'w-64 h-80'   // 桌面：正常大小
-                            } 
-                            border-2 border-purple-400 rounded-[50%] animate-pulse
-                          `} 
-                        />
-                        
-                        {/* 引導線 - 幫助用戶對準眼睛和嘴巴位置 */}
-                        <div className="absolute top-[30%] left-0 right-0 border-t border-purple-300/50 border-dashed">
-                          <span className="absolute -top-3 -left-12 text-xs text-purple-300">眼睛</span>
-                        </div>
-                        <div className="absolute top-[65%] left-0 right-0 border-t border-purple-300/50 border-dashed">
-                          <span className="absolute -top-3 -left-12 text-xs text-purple-300">嘴巴</span>
-                        </div>
-                        
-                        {/* 四角標記 */}
-                        <div className="absolute -top-2 -left-2 w-6 h-6 border-t-2 border-l-2 border-purple-500 rounded-tl-lg" />
-                        <div className="absolute -top-2 -right-2 w-6 h-6 border-t-2 border-r-2 border-purple-500 rounded-tr-lg" />
-                        <div className="absolute -bottom-2 -left-2 w-6 h-6 border-b-2 border-l-2 border-purple-500 rounded-bl-lg" />
-                        <div className="absolute -bottom-2 -right-2 w-6 h-6 border-b-2 border-r-2 border-purple-500 rounded-br-lg" />
-                        
-                        {/* 完美對準指示器 */}
-                        {mockFaceQuality.area === 'good' && mockFaceQuality.frontal === 'good' && (
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2">
-                            <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full animate-bounce">
-                              ✓ 完美對準
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 狀態指示器 - 移到底部以避免遮擋臉部 */}
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <div className="bg-black/60 backdrop-blur-sm rounded-lg p-2">
-                      <div className="flex flex-wrap gap-2 justify-center items-center">
-                        <div className="flex items-center gap-1">
-                          <div className={`w-2 h-2 rounded-full ${
-                            mockFaceQuality.hasFace ? 'bg-green-400' : 'bg-red-400'
-                          } animate-pulse`} />
-                          <span className="text-xs text-white">
-                            {mockFaceQuality.hasFace ? '臉部已檢測' : '搜尋臉部中...'}
-                          </span>
-                        </div>
-                        {mockFaceQuality.hasFace && (
-                          <>
-                            <span className="text-white/50">|</span>
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs text-white">光線:</span>
-                              <div className={`w-3 h-3 rounded-full ${
-                                mockFaceQuality.lighting === 'good' ? 'bg-green-400' :
-                                mockFaceQuality.lighting === 'ok' ? 'bg-yellow-400' : 'bg-red-400'
-                              }`} />
-                            </div>
-                            <span className="text-white/50">|</span>
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs text-white">角度:</span>
-                              <div className={`w-3 h-3 rounded-full ${
-                                mockFaceQuality.frontal === 'good' ? 'bg-green-400' : 'bg-yellow-400'
-                              }`} />
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* 提示文字 - 未檢測到臉部時 */}
-                  {!mockFaceQuality.hasFace && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center p-6 bg-black/70 backdrop-blur-sm rounded-2xl mx-4">
-                        <div className="text-4xl mb-3 animate-bounce">👤</div>
-                        <p className="text-white text-lg font-medium mb-2">
-                          請將臉部對準畫面中央
-                        </p>
-                        <p className="text-white/80 text-sm">
-                          保持約 30-40 公分距離<br/>
-                          確保光線充足，正面面對攝像頭
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="flex items-center justify-center h-full bg-gradient-to-br from-purple-100 to-pink-100">
-              <div className="text-center p-6">
-                <FiCamera className="w-16 h-16 text-purple-400 mx-auto mb-4" />
-                <p className="text-purple-600 font-medium text-lg">攝像頭未開啟</p>
-                <p className="text-sm text-purple-500 mt-2">點擊下方按鈕開始分析</p>
-                {window.innerWidth < 768 && (
-                  <div className="mt-4 p-3 bg-purple-50 rounded-lg">
-                    <p className="text-xs text-purple-600">
-                      💡 最佳拍攝提示：
-                    </p>
-                    <ul className="text-xs text-purple-500 mt-2 text-left">
-                      <li>• 手機距離臉部 30-40 公分</li>
-                      <li>• 垂直握持手機</li>
-                      <li>• 在明亮環境下拍攝</li>
-                      <li>• 正面面對攝像頭</li>
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-       
-        <div className="flex justify-center gap-4 mt-6">
-          {!cameraOpened ? (
-            <button
-              onClick={openCamera}
-              disabled={cameraLoading}
-              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-medium hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50"
-            >
-              {cameraLoading ? '開啟中...' : '開啟攝像頭'}
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={captureAndAnalyze}
-                disabled={captureInProgress || !mockFaceQuality?.hasFace}
-                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-medium hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50"
-              >
-                {captureInProgress ? '分析中...' : '拍照分析'}
-              </button>
-              <button
-                onClick={closeCamera}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-full font-medium hover:bg-gray-300 transition-all"
-              >
-                關閉攝像頭
-              </button>
-            </>
-          )}
-        </div>
-      </div>
 
       {/* 分析中動畫 */}
       {isAnalyzing && (
@@ -1018,14 +877,12 @@ const SkinAnalysis = ({ isModal = false }) => {
                     {getConcernIcon(concern.category)}
                     <div>
                       <span className="font-medium text-slate-800">{concern.name}</span>
-                      {/* 添加詳細描述 */}
                       {concern.score < 60 && (
                         <p className="text-xs text-slate-500 mt-0.5">需要特別關注</p>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    {/* 分數條形圖 */}
                     <div className="w-24 bg-gray-200 rounded-full h-2">
                       <div 
                         className={`h-2 rounded-full transition-all duration-500 ${
@@ -1044,7 +901,6 @@ const SkinAnalysis = ({ isModal = false }) => {
               ))}
             </div>
             
-            {/* 分析摘要 */}
             <div className="mt-4 p-4 bg-purple-50 rounded-lg">
               <p className="text-sm text-purple-800">
                 <strong>分析摘要：</strong>
@@ -1069,7 +925,6 @@ const SkinAnalysis = ({ isModal = false }) => {
                   </span>
                   <div className="flex-1">
                     <p className="text-slate-800">{rec}</p>
-                    {/* 添加執行時間建議 */}
                     {index === 2 && (
                       <p className="text-xs text-slate-500 mt-1">
                         <AiOutlineFire className="inline w-3 h-3 text-red-500 mr-1" />
@@ -1081,7 +936,6 @@ const SkinAnalysis = ({ isModal = false }) => {
               ))}
             </div>
             
-            {/* 產品推薦區 */}
             <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
               <h4 className="text-sm font-semibold text-purple-800 mb-2">
                 🌟 九運美麗小貼士
@@ -1103,7 +957,6 @@ const SkinAnalysis = ({ isModal = false }) => {
             </button>
             <button
               onClick={() => {
-                // 保存分析結果的邏輯
                 alert('分析結果已保存到美麗記憶庫！');
               }}
               className="px-6 py-3 bg-white text-purple-600 border-2 border-purple-500 rounded-full font-medium hover:bg-purple-50 transition-all shadow-lg hover:shadow-xl"
@@ -1112,7 +965,6 @@ const SkinAnalysis = ({ isModal = false }) => {
             </button>
             <button
               onClick={() => {
-                // 分享功能
                 if (navigator.share) {
                   navigator.share({
                     title: '我的肌膚分析報告',
@@ -1150,7 +1002,7 @@ const SkinAnalysis = ({ isModal = false }) => {
 // 主要的 BeautyMemoryWebsite 組件
 const BeautyMemoryWebsite = () => {
   const [scrollY, setScrollY] = useState(0);
-  const [currentView, setCurrentView] = useState('home'); // 'home' 或 'analysis'
+  const [currentView, setCurrentView] = useState('home');
   const [memories, setMemories] = useState([
     {
       id: 1,
@@ -1219,7 +1071,7 @@ const BeautyMemoryWebsite = () => {
   const handleAnalysisClick = () => {
     setCurrentView('analysis');
     showNotification('正在啟動 AI 肌膚分析系統...', 'info');
-    window.scrollTo(0, 0); // 滾動到頂部
+    window.scrollTo(0, 0);
   };
 
   // 返回首頁
@@ -1417,7 +1269,7 @@ const BeautyMemoryWebsite = () => {
               AI 賦能的美麗科技
             </h2>
             <p className="text-xl text-center text-slate-600 mb-12">
-              Perfect Corp 技術支援，專業皮膚科醫師等級分析
+              Perfect Corp 技術支持，專業皮膚科醫師等級分析
             </p>
 
             <div className="grid md:grid-cols-3 gap-8">
