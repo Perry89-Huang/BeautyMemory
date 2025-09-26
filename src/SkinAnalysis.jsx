@@ -514,7 +514,7 @@ const SkinAnalysis = () => {
         <div className={`mb-6 p-3 rounded-lg text-center ${
           apiStatus.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
         }`}>
-          <p className="text-sm font-medium">九紫離火運加持 • 專業美肌檢測</p>
+          
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
