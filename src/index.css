@@ -1,0 +1,162 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === Google 字型引入 === */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700;900&family=Noto+Serif+TC:wght@400;500;600;700;900&display=swap');
+
+/* ========================================
+   全域樣式設定
+   ======================================== */
+
+:root {
+  /* === 中文排版專用變數 === */
+  --font-sans-tc: 'Noto Sans TC', 'Taipei Sans TC', 'PingFang TC', 'Hiragino Sans GB', 'Microsoft JhengHei', 'Source Han Sans TC', sans-serif;
+  --font-serif-tc: 'Noto Serif TC', 'Taipei Sans TC', 'PingFang TC', 'Hiragino Mincho ProN', 'Microsoft JhengHei', serif;
+  
+  /* === 行間距系統 === */
+  --leading-tight: 1.4;    /* 緊密 - 標題用 */
+  --leading-normal: 1.6;   /* 標準 - 短段落 */
+  --leading-relaxed: 1.7;  /* 舒適 - 長段落 */
+  
+  /* === 字距系統 === */
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.02em;
+  --tracking-wider: 0.05em;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans-tc);
+  font-size: 1rem;
+  line-height: var(--leading-relaxed);
+  letter-spacing: var(--tracking-normal);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif-tc);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: 0.5em;
+}
+
+p {
+  margin-bottom: 1em;
+  line-height: var(--leading-relaxed);
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+strong, b {
+  font-weight: 600;
+}
+
+em, i {
+  font-style: normal;
+  font-weight: 500;
+}
+
+ul, ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+  line-height: var(--leading-relaxed);
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+li:last-child {
+  margin-bottom: 0;
+}
+
+/* ========================================
+   手機優化基礎設定
+   ======================================== */
+
+/* iOS Safari 修復 */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important; /* 防止 iOS 縮放 */
+  }
+  
+  button,
+  input[type="button"],
+  input[type="submit"] {
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+}
+
+/* Android 特定修復 */
+@media (max-width: 768px) {
+  .mobile-text-crisp {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  .mobile-scroll-fix {
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+  }
+}
+
+/* ========================================
+   無障礙優化
+   ======================================== */
+
+/* 減少動畫偏好支援 */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 高對比模式支援 */
+@media (prefers-contrast: high) {
+  body {
+    color: #000000;
+    background-color: #FFFFFF;
+  }
+}
+
+/* ========================================
+   列印樣式優化
+   ======================================== */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  * {
+    color: #000 !important;
+    background: #fff !important;
+  }
+}
