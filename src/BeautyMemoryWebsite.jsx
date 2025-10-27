@@ -54,7 +54,6 @@ import {
 import { 
   RiSparklingFill,
   RiBrainFill,
-  RiMagicFill,
   RiFlowerFill
 } from 'react-icons/ri';
 
@@ -1132,9 +1131,12 @@ const BeautyMemoryWebsite = () => {
                 <AiOutlineClose className="w-6 h-6 text-gray-600" />
               </button>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                  <RiMagicFill className="w-6 h-6 text-white" />
-                </div>
+                {/* Logo 圖片 - 與首頁一致 */}
+                <img 
+                  src="/images/logo1.png" 
+                  alt="美魔力 Logo" 
+                  className="w-10 h-10 object-contain"
+                />
                 <div>
                   <h1 className="text-xl font-bold text-slate-800">美魔力 AI 肌膚分析</h1>
                   <p className="text-xs text-purple-600">Perfect Corp 技術驅動</p>
@@ -1190,9 +1192,12 @@ const BeautyMemoryWebsite = () => {
       }`}>
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-              <RiMagicFill className="w-6 h-6 text-white" />
-            </div>
+            {/* Logo 圖片 - 可以選擇 logo1.png、logo2.png 或 logo3.png */}
+            <img 
+              src="/images/logo1.png" 
+              alt="美魔力 Logo" 
+              className="w-10 h-10 object-contain"
+            />
             <div>
               <h1 className="text-xl font-bold text-slate-800">美魔力</h1>
               <p className="text-xs text-purple-600">Beauty Memory</p>
@@ -1399,14 +1404,14 @@ const BeautyMemoryWebsite = () => {
           {/* Logo 和標題 */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <RiMagicFill className="w-6 h-6 text-white" />
-              </div>
+              {/* Logo 圖片 - 頁尾使用反白效果 */}
+              <img 
+                src="/images/logo1.png" 
+                alt="美魔力 Logo" 
+                className="w-10 h-10 object-contain brightness-0 invert"
+              />
               <h3 className="text-2xl font-bold">美魔力 Beauty Memory</h3>
             </div>
-            <p className="text-slate-400 mb-4">
-              Powered by Perfect Corp AI Technology
-            </p>
           </div>
           
           {/* 頁尾連結 */}
@@ -1431,7 +1436,7 @@ const BeautyMemoryWebsite = () => {
           {/* 版權資訊 */}
           <div className="mt-6 text-center text-xs text-slate-500 border-t border-slate-700 pt-6">
             <p className="mb-2">美魔力智能行銷有限公司 • 統一編號: 60456507</p>
-            <p>© 2025 美魔力. 推廣所有跟美相關的人事物</p>
+            <p>© 2025 美魔力. 發現台灣美好的風景</p>
           </div>
         </div>
       </footer>
