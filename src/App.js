@@ -3,6 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import BeautyMemoryWebsite from './BeautyMemoryWebsite';
 import LotusBeautyLanding from './components/LotusBeautyLanding';
+import Heyan28DaysLanding from './components/Heyan28DaysLanding';
 
 function App() {
   return (
@@ -12,9 +13,8 @@ function App() {
         <Route path="/" element={<BeautyMemoryWebsite />} />
         
         {/* 荷顏產品 Landing Page */}
-        <Route path="/lotus-beauty" element={<LotusBeautyLanding />} />
         <Route path="/lotusbeauty" element={<LotusBeautyLanding />} />
-        <Route path="/nine-fire-beauty" element={<LotusBeautyLanding />} />
+        <Route path="/lotusbeauty-2" element={<Heyan28DaysLanding />} />
       </Routes>
     </Router>
   );
