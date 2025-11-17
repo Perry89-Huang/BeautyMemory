@@ -171,7 +171,7 @@ const AboutUs = ({ onBack }) => {
 
           <div className="border-t border-slate-700 pt-6">
             <p className="text-slate-400 mb-2">
-              Powered by Perfect Corp AI Technology
+              Powered by AILabTools AI Technology
             </p>
             <p className="text-sm text-slate-500">
               © 2025 美魔力智能行銷有限公司 版權所有

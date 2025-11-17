@@ -157,7 +157,8 @@ const generateRecommendations = (analysisData) => {
  * AI 肌膚檢測組件
  */
 const SkinAnalysis = () => {
-  const API_BASE_URL = 'https://beautymemory-6a58c48154f4.herokuapp.com';
+  // 使用環境變數或預設值
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://beautymemory-6a58c48154f4.herokuapp.com';
   
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -239,49 +240,83 @@ const SkinAnalysis = () => {
     const formData = new FormData();
     formData.append('image', selectedImage);
 
+    console.log('📤 發送請求到:', `${API_BASE_URL}/api/analyze`);
+    console.log('📷 圖片檔案:', selectedImage.name, selectedImage.type, selectedImage.size);
+
     const response = await fetch(`${API_BASE_URL}/api/analyze`, {
       method: 'POST',
-      body: formData
+      body: formData,
+      // 不要手動設置 Content-Type，讓瀏覽器自動處理 multipart/form-data
     });
 
     clearInterval(progressInterval);
     setAnalysisProgress(100);
 
+    console.log('📥 回應狀態:', response.status, response.statusText);
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // 嘗試讀取錯誤詳情
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        console.error('❌ 伺服器錯誤詳情:', errorData);
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch (e) {
+        const errorText = await response.text();
+        console.error('❌ 伺服器回應文本:', errorText);
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
-    console.log('API 完整回應:', data);
+    console.log('✅ API 完整回應:', data);
 
     if (data.success) {
-      // 修復: 正確提取分析數據
-      // API 結構是 data.data.analysis.result
-      let rawAnalysis = {};
-      
-      if (data.data?.analysis?.result) {
-        rawAnalysis = data.data.analysis.result;
-        console.log('✅ 從 data.data.analysis.result 提取數據');
-      } else if (data.data?.result) {
-        rawAnalysis = data.data.result;
-        console.log('✅ 從 data.data.result 提取數據');
-      } else if (data.data?.analysis) {
-        rawAnalysis = data.data.analysis;
-        console.log('✅ 從 data.data.analysis 提取數據');
+      console.log('✅ API 回應結構:', {
+        hasAnalysis: !!data.data?.analysis,
+        hasSummary: !!data.data?.summary,
+        summaryKeys: data.data?.summary ? Object.keys(data.data.summary) : []
+      });
+
+      // 優先使用後端返回的 summary 數據
+      let overall_score, skin_age, rawAnalysis, recommendations;
+
+      if (data.data?.summary) {
+        // 使用後端計算好的摘要數據
+        console.log('✅ 使用後端 summary 數據');
+        overall_score = data.data.summary.overall_score;
+        skin_age = data.data.summary.skin_age;
+        
+        // 處理 recommendations - 轉換對象數組為字符串數組
+        const backendRecs = data.data.summary.recommendations || [];
+        if (backendRecs.length > 0 && typeof backendRecs[0] === 'object') {
+          recommendations = backendRecs.map(rec => rec.suggestion || rec.issue);
+        } else {
+          recommendations = backendRecs;
+        }
+        
+        rawAnalysis = data.data.analysis?.result || {};
+        
+        console.log('後端 summary:', {
+          overall_score,
+          skin_age,
+          recommendations_count: recommendations.length
+        });
       } else {
-        console.error('❌ 無法找到分析數據');
+        // 後備方案：使用前端計算
+        console.log('⚠️ 無 summary，使用前端計算');
+        rawAnalysis = data.data?.analysis?.result || data.data?.result || data.data?.analysis || {};
+        overall_score = calculateOverallScore(rawAnalysis);
+        skin_age = estimateSkinAge(rawAnalysis);
+        recommendations = generateRecommendations(rawAnalysis);
       }
       
       console.log('原始分析數據:', rawAnalysis);
-      console.log('分析項目數量:', Object.keys(rawAnalysis).length);
-      
-      const overallScore = calculateOverallScore(rawAnalysis);
-      const skinAge = estimateSkinAge(rawAnalysis);
-      const recommendations = generateRecommendations(rawAnalysis);
+      console.log('最終數據:', { overall_score, skin_age });
       
       const processedData = {
-        overall_score: overallScore,
-        skin_age: skinAge,
+        overall_score: overall_score,
+        skin_age: skin_age,
         analysis: rawAnalysis,
         recommendations: recommendations,
         face_rectangle: data.data?.face_rectangle || data.data?.analysis?.face_rectangle,
@@ -296,8 +331,19 @@ const SkinAnalysis = () => {
     }
 
   } catch (err) {
-    console.error('分析錯誤:', err);
-    setError(err.message || '分析過程發生錯誤,請重試');
+    let userFriendlyMessage = '分析過程發生錯誤，請重試';
+    
+    if (err.message.includes('400')) {
+      userFriendlyMessage = '圖片格式不正確或檔案損壞，請選擇其他照片';
+    } else if (err.message.includes('401') || err.message.includes('403')) {
+      userFriendlyMessage = 'API 認證失敗，請聯繫系統管理員';
+    } else if (err.message.includes('500')) {
+      userFriendlyMessage = '伺服器暫時無法處理，請稍後再試';
+    } else if (err.message.includes('Failed to fetch') || err.message.includes('Network')) {
+      userFriendlyMessage = '網路連線失敗，請檢查網路狀態';
+    }
+    
+    setError(userFriendlyMessage);
   } finally {
     setIsAnalyzing(false);
     setAnalysisProgress(0);

@@ -51,8 +51,8 @@ export const SYSTEM_FEATURES = [
   {
     icon: <BiScan className="w-8 h-8" />,
     title: "AI 即時肌膚掃描",
-    subtitle: "Perfect Corp 14項專業檢測",
-    description: "運用 Perfect Corp 專業技術，即時分析皺紋、毛孔、色斑、亮澤度等 14 項肌膚指標，95% 準確率媲美專業皮膚科醫師，提供醫師級分析報告。",
+    subtitle: "AILabTools 14項專業檢測",
+    description: "運用 AILabTools AI 技術，即時分析皺紋、毛孔、色斑、亮澤度等 14 項肌膚指標，95% 準確率婲美專業皮膚科醫師，提供醫師級分析報告。",
     gradient: "from-blue-400 to-cyan-400",
     details: [
       "即時肌膚狀態掃描",
@@ -175,7 +175,7 @@ export const ANALYSIS_STEPS = [
   {
     step: "02", 
     title: "AI 分析中",
-    description: "Perfect Corp AI 引擎進行 14 項專業檢測，採用醫師級分析標準",
+    description: "AILabTools AI 引擎進行 14 項專業檢測，採用醫師級分析標準",
     icon: <RiBrainFill className="w-8 h-8" />,
     action: "分析中...",
     process: [
@@ -184,7 +184,7 @@ export const ANALYSIS_STEPS = [
       "肌膚區域分割",
       "多維度數據分析"
     ],
-    technology: "Perfect Corp AgileFace® 技術"
+    technology: "AILabTools AI 進階技術"
   },
   {
     step: "03",
@@ -320,10 +320,10 @@ export const APP_CONFIG = {
     slogan: "讓科技記住每個美麗瞬間"
   },
   technology: {
-    provider: "Perfect Corp",
+    provider: "AILabTools",
     accuracy: "95%",
     features: 14,
-    patentTech: "AgileFace® 追蹤技術",
+    patentTech: "AILabTools AI 進階技術",
     apiVersion: "v1.0",
     certification: "醫師級認證"
   },
@@ -357,7 +357,7 @@ export const APP_CONFIG = {
   contact: {
     year: "2025",
     copyright: "美魔力 Beauty Memory • AI 智能肌膚分析系統",
-    poweredBy: "Powered by Perfect Corp • Memory = 美魔力 • 讓科技記住每個美麗瞬間",
+    poweredBy: "Powered by AILabTools • Memory = 美魔力 • 讓科技記住每個美麗瞬間",
     email: "contact@beautymemory.com",
     website: "https://beautymemory.com"
   },

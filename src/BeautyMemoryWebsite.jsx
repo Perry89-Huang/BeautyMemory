@@ -91,7 +91,7 @@ function BeautyMemoryWebsite() {
               </p>
               
               <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-8">
-                結合 Perfect Corp 專業技術與九紫離火運能量,
+                結合 AILabTools AI 技術與九紫離火運能量,
                 為您打造專屬的美麗記憶庫,讓每一次護膚都成為科學化的美麗投資
               </p>
 

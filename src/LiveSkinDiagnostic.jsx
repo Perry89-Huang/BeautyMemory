@@ -269,7 +269,7 @@ const LiveSkinDiagnostic = () => {
 
   // Share results
   const shareResults = () => {
-    const message = `我剛剛完成了 AI 肌膚檢測！\n\n📊 整體評分: ${overallScore}/100\n🔬 採用 Perfect Corp 專業技術\n✨ 95% 醫師級準確率\n\n立即體驗: 美魔力 AI Live Diagnostic`;
+    const message = `我剛剛完成了 AI 肌膚檢測！\n\n📊 整體評分: ${overallScore}/100\n🔬 採用 AILabTools AI 技術\n✨ 95% 醫師級準確率\n\n立即體驗: 美魔力 AI Live Diagnostic`;
     
     if (navigator.share) {
       navigator.share({
@@ -353,7 +353,7 @@ const LiveSkinDiagnostic = () => {
             AI Live Skin Diagnostic
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-            採用 Perfect Corp 專業技術，即時分析14項肌膚指標<br/>
+            採用 AILabTools AI 技術，即時分析14項肌膚指標<br/>
             95% 醫師級準確率 • 結合2025九紫離火運最佳護膚時機
           </p>
           <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
@@ -375,7 +375,7 @@ const LiveSkinDiagnostic = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-gray-800 mb-4">即時肌膚診斷系統</h2>
-            <p className="text-lg text-gray-600">Perfect Corp AI 技術 • 即時分析 • 精準診斷</p>
+            <p className="text-lg text-gray-600">AILabTools AI 技術 • 即時分析 • 精準診斷</p>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -794,7 +794,7 @@ const LiveSkinDiagnostic = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-gray-800 mb-4">14項專業肌膚檢測</h2>
-            <p className="text-lg text-gray-600">Perfect Corp AI 技術 • 95% 醫師級準確率</p>
+            <p className="text-lg text-gray-600">AILabTools AI 技術 • 95% 醫師級準確率</p>
           </div>
 
           <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -815,9 +815,9 @@ const LiveSkinDiagnostic = () => {
       <section id="technology" className="container mx-auto px-4 py-16">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-800 mb-4">Perfect Corp 專業技術驅動</h2>
+            <h2 className="text-4xl font-bold text-gray-800 mb-4">AILabTools AI 技術驅動</h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              採用全球領先的 Perfect Corp AI 肌膚分析技術，提供媲美專業皮膚科醫師的精準檢測服務
+              採用先進的 AILabTools AI 肌膚分析技術，提供媲美專業皮膚科醫師的精準檢測服務
             </p>
           </div>
 
@@ -875,7 +875,7 @@ const LiveSkinDiagnostic = () => {
                 <div className="w-32 h-32 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full border-4 border-purple-200 flex items-center justify-center mx-auto mb-4">
                   <span className="text-4xl">🔬</span>
                 </div>
-                <p className="text-gray-600 text-sm">Perfect Corp 專利 AgileFace® 追蹤技術</p>
+                <p className="text-gray-600 text-sm">AILabTools AI 進階追蹤技術</p>
               </div>
             </div>
           </div>
@@ -891,7 +891,7 @@ const LiveSkinDiagnostic = () => {
               立即體驗 AI 肌膚分析
             </h2>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              Perfect Corp 專業技術 • 95% 醫師級準確率<br/>
+              AILabTools AI 技術 • 95% 醫師級準確率<br/>
               開始建立專屬的美麗記憶庫
             </p>
             
@@ -1107,7 +1107,7 @@ const LiveSkinDiagnostic = () => {
 
           <div className="border-t border-gray-800 mt-8 pt-8 text-center">
             <p className="text-gray-400 text-sm">
-              © 2025 美魔力 AI Live Diagnostic. Powered by Perfect Corp Technology.
+              © 2025 美魔力 AI Live Diagnostic. Powered by AILabTools AI Technology.
             </p>
             <div className="mt-4 flex justify-center gap-4 text-gray-400 text-xs">
               <a href="#" className="hover:text-purple-400 transition-colors">隱私政策</a>
