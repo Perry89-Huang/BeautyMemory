@@ -7,7 +7,8 @@ import {
   BiHeart,
   BiTrendingUp,
   BiDownload,
-  BiInfoCircle
+  BiInfoCircle,
+  BiVideoRecording
 } from 'react-icons/bi';
 import { FiStar, FiAlertCircle } from 'react-icons/fi';
 
@@ -192,28 +193,7 @@ const SkinAnalysis = () => {
     return () => {
       stopCamera();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // 停止相機
-  const stopCamera = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    setCameraActive(false);
-    setFaceDetected(false);
-    setLightingStatus({ status: 'checking', text: '檢測中' });
-    setAngleStatus({ status: 'checking', text: '檢測中' });
-    setDistanceStatus({ status: 'checking', text: '檢測中' });
-    if (detectionIntervalRef.current) {
-      clearInterval(detectionIntervalRef.current);
-      detectionIntervalRef.current = null;
-    }
-  }, [stream]);
 
   // 開啟相機
   const startCamera = async () => {
@@ -237,14 +217,36 @@ const SkinAnalysis = () => {
       }
     } catch (err) {
       setError('無法開啟相機，請確認瀏覽器權限設定');
+      console.error('Camera error:', err);
     }
+  };
+
+  // 停止相機
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+    stopRealTimeDetection();
   };
 
   // 開始即時檢測
   const startRealTimeDetection = () => {
     detectionIntervalRef.current = setInterval(() => {
       detectFaceQuality();
-    }, 1000); // 從 500ms 改為 1000ms，減少更新頻率
+    }, 500);
+  };
+
+  // 停止即時檢測
+  const stopRealTimeDetection = () => {
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
+    }
   };
 
   // 檢測臉部品質（模擬）
@@ -303,7 +305,7 @@ const SkinAnalysis = () => {
       // 轉換為 File 對象
       const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
       
-      // 驗證並分析
+      // 驗證圖片
       await validateAndAnalyze(file);
     }, 'image/jpeg', 0.95);
   };
@@ -353,8 +355,6 @@ const SkinAnalysis = () => {
     setCameraMode(!cameraMode);
     setError(null);
     setAnalysisResult(null);
-    setSelectedImage(null);
-    setPreviewUrl(null);
   };
 
   // 上傳模式的文件處理
@@ -439,112 +439,139 @@ const SkinAnalysis = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // 分析圖片
-  const analyzeImage = async (file) => {
-    if (!file) {
-      setError('請先上傳照片');
-      return;
+  const analyzeImage = async () => {
+  if (!selectedImage) {
+    setError('請先上傳照片');
+    return;
+  }
+
+  setIsAnalyzing(true);
+  setError(null);
+  setAnalysisProgress(0);
+
+  try {
+    const progressInterval = setInterval(() => {
+      setAnalysisProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 10;
+      });
+    }, 300);
+
+    const formData = new FormData();
+    formData.append('image', selectedImage);
+
+    console.log('📤 發送請求到:', `${API_BASE_URL}/api/analyze`);
+    console.log('📷 圖片檔案:', selectedImage.name, selectedImage.type, selectedImage.size);
+
+    const response = await fetch(`${API_BASE_URL}/api/analyze`, {
+      method: 'POST',
+      body: formData,
+      // 不要手動設置 Content-Type，讓瀏覽器自動處理 multipart/form-data
+    });
+
+    clearInterval(progressInterval);
+    setAnalysisProgress(100);
+
+    console.log('📥 回應狀態:', response.status, response.statusText);
+
+    if (!response.ok) {
+      // 嘗試讀取錯誤詳情
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        console.error('❌ 伺服器錯誤詳情:', errorData);
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch (e) {
+        const errorText = await response.text();
+        console.error('❌ 伺服器回應文本:', errorText);
+      }
+      throw new Error(errorMessage);
     }
 
-    setIsAnalyzing(true);
-    setError(null);
-    setAnalysisProgress(0);
+    const data = await response.json();
+    console.log('✅ API 完整回應:', data);
 
-    try {
-      const progressInterval = setInterval(() => {
-        setAnalysisProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 300);
-
-      const formData = new FormData();
-      formData.append('image', file);
-
-      const response = await fetch(`${API_BASE_URL}/api/analyze`, {
-        method: 'POST',
-        body: formData,
+    if (data.success) {
+      console.log('✅ API 回應結構:', {
+        hasAnalysis: !!data.data?.analysis,
+        hasSummary: !!data.data?.summary,
+        summaryKeys: data.data?.summary ? Object.keys(data.data.summary) : []
       });
 
-      clearInterval(progressInterval);
-      setAnalysisProgress(100);
+      // 優先使用後端返回的 summary 數據
+      let overall_score, skin_age, rawAnalysis, recommendations;
 
-      if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorData.message || errorMessage;
-        } catch (e) {
-          // Ignore JSON parse error
-        }
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        let overall_score, skin_age, rawAnalysis, recommendations;
-
-        if (data.data?.summary) {
-          overall_score = data.data.summary.overall_score;
-          skin_age = data.data.summary.skin_age;
-          
-          const backendRecs = data.data.summary.recommendations || [];
-          if (backendRecs.length > 0 && typeof backendRecs[0] === 'object') {
-            recommendations = backendRecs.map(rec => rec.suggestion || rec.issue);
-          } else {
-            recommendations = backendRecs;
-          }
-          
-          rawAnalysis = data.data.analysis?.result || {};
+      if (data.data?.summary) {
+        // 使用後端計算好的摘要數據
+        console.log('✅ 使用後端 summary 數據');
+        overall_score = data.data.summary.overall_score;
+        skin_age = data.data.summary.skin_age;
+        
+        // 處理 recommendations - 轉換對象數組為字符串數組
+        const backendRecs = data.data.summary.recommendations || [];
+        if (backendRecs.length > 0 && typeof backendRecs[0] === 'object') {
+          recommendations = backendRecs.map(rec => rec.suggestion || rec.issue);
         } else {
-          rawAnalysis = data.data?.analysis?.result || data.data?.result || data.data?.analysis || {};
-          overall_score = calculateOverallScore(rawAnalysis);
-          skin_age = estimateSkinAge(rawAnalysis);
-          recommendations = generateRecommendations(rawAnalysis);
+          recommendations = backendRecs;
         }
         
-        const processedData = {
-          overall_score: overall_score,
-          skin_age: skin_age,
-          analysis: rawAnalysis,
-          recommendations: recommendations,
-          face_rectangle: data.data?.face_rectangle || data.data?.analysis?.face_rectangle,
-          raw_data: data.data
-        };
+        rawAnalysis = data.data.analysis?.result || {};
         
-        setAnalysisResult(processedData);
-        
-        // 關閉相機
-        if (cameraMode && stream) {
-          stopCamera();
-        }
+        console.log('後端 summary:', {
+          overall_score,
+          skin_age,
+          recommendations_count: recommendations.length
+        });
       } else {
-        throw new Error(data.error || '分析失敗');
-      }
-
-    } catch (err) {
-      let userFriendlyMessage = '分析過程發生錯誤，請重試';
-      
-      if (err.message.includes('400')) {
-        userFriendlyMessage = '圖片格式不正確或檔案損壞，請選擇其他照片';
-      } else if (err.message.includes('401') || err.message.includes('403')) {
-        userFriendlyMessage = 'API 認證失敗，請聯繫系統管理員';
-      } else if (err.message.includes('500')) {
-        userFriendlyMessage = '伺服器暫時無法處理，請稍後再試';
-      } else if (err.message.includes('Failed to fetch') || err.message.includes('Network')) {
-        userFriendlyMessage = '網路連線失敗，請檢查網路狀態';
+        // 後備方案：使用前端計算
+        console.log('⚠️ 無 summary，使用前端計算');
+        rawAnalysis = data.data?.analysis?.result || data.data?.result || data.data?.analysis || {};
+        overall_score = calculateOverallScore(rawAnalysis);
+        skin_age = estimateSkinAge(rawAnalysis);
+        recommendations = generateRecommendations(rawAnalysis);
       }
       
-      setError(userFriendlyMessage);
-    } finally {
-      setIsAnalyzing(false);
-      setAnalysisProgress(0);
+      console.log('原始分析數據:', rawAnalysis);
+      console.log('最終數據:', { overall_score, skin_age });
+      
+      const processedData = {
+        overall_score: overall_score,
+        skin_age: skin_age,
+        analysis: rawAnalysis,
+        recommendations: recommendations,
+        face_rectangle: data.data?.face_rectangle || data.data?.analysis?.face_rectangle,
+        raw_data: data.data
+      };
+      
+      console.log('處理後的數據:', processedData);
+      console.log('分析項目列表:', Object.keys(processedData.analysis));
+      setAnalysisResult(processedData);
+    } else {
+      throw new Error(data.error || '分析失敗');
     }
-  };
+
+  } catch (err) {
+    let userFriendlyMessage = '分析過程發生錯誤，請重試';
+    
+    if (err.message.includes('400')) {
+      userFriendlyMessage = '圖片格式不正確或檔案損壞，請選擇其他照片';
+    } else if (err.message.includes('401') || err.message.includes('403')) {
+      userFriendlyMessage = 'API 認證失敗，請聯繫系統管理員';
+    } else if (err.message.includes('500')) {
+      userFriendlyMessage = '伺服器暫時無法處理，請稍後再試';
+    } else if (err.message.includes('Failed to fetch') || err.message.includes('Network')) {
+      userFriendlyMessage = '網路連線失敗，請檢查網路狀態';
+    }
+    
+    setError(userFriendlyMessage);
+  } finally {
+    setIsAnalyzing(false);
+    setAnalysisProgress(0);
+  }
+};
 
   const downloadReport = () => {
     if (!analysisResult) return;
@@ -665,232 +692,59 @@ const SkinAnalysis = () => {
         </div>
       </div>
 
-      {/* 檢測區域 */}
+      {/* 上傳區域 */}
       {!analysisResult && (
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-purple-100">
-          {/* 模式切換 */}
-          <div className="flex justify-center mb-6">
-            <div className="inline-flex rounded-2xl border-2 border-purple-200 p-1.5 bg-purple-50 shadow-md">
-              <button
-                onClick={() => cameraMode || switchMode()}
-                className={`px-8 py-3 rounded-xl transition-all font-semibold ${
-                  cameraMode
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                    : 'text-slate-600 hover:text-purple-600'
-                }`}
-              >
-                <BiCamera className="inline w-6 h-6 mr-2" />
-                即時檢測
-              </button>
-              <button
-                onClick={() => !cameraMode || switchMode()}
-                className={`px-8 py-3 rounded-xl transition-all font-semibold ${
-                  !cameraMode
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                    : 'text-slate-600 hover:text-purple-600'
-                }`}
-              >
-                <BiUpload className="inline w-6 h-6 mr-2" />
-                上傳照片
-              </button>
-            </div>
+          <h2 className="text-2xl font-semibold text-center mb-6 text-slate-800">
+            開始您的肌膚檢測之旅
+          </h2>
+          <p className="text-center text-slate-600 mb-4">
+            請上傳清晰的正面肌膚照片，光線充足效果更佳
+          </p>
+          <div className="text-center text-sm text-slate-500 mb-6 space-y-1">
+            <p>📋 圖片要求：JPG/JPEG 格式，最大 5MB</p>
+            <p>📐 解析度：200x200 至 4096x4096 像素</p>
+            <p>👤 建議臉部像素大於 400px，正面角度（偏轉 ≤ ±30°，俯仰 ≤ ±40°）</p>
           </div>
 
-          {/* 相機模式 */}
-          {cameraMode && (
-            <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-center text-slate-800">
-                即時肌膚檢測
-              </h2>
-              <p className="text-center text-slate-600 text-base font-medium mb-4">
-                請面向鏡頭，確保光線充足，保持正面角度
+          {!previewUrl ? (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              className="border-3 border-dashed border-purple-300 rounded-xl p-12 text-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all"
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <BiUpload className="w-16 h-16 mx-auto text-purple-400 mb-4" />
+              <p className="text-lg text-slate-700 mb-2">
+                點擊上傳照片或拖曳檔案至此
               </p>
-
-              {/* 相機畫面 */}
-              <div className="relative mx-auto max-w-2xl">
-                <div className="relative aspect-[3/4] bg-slate-900 rounded-2xl overflow-hidden">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                    style={{ transform: 'scaleX(-1)' }}
-                  />
-                  
-                  {/* 臉部框線 */}
-                  {stream && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-72 h-96 border-4 border-white rounded-full opacity-30"></div>
-                    </div>
-                  )}
-
-                  {/* 未開啟相機時的提示 */}
-                  {!stream && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                      <BiCamera className="w-20 h-20 mb-4 opacity-50" />
-                      <p className="text-lg">點擊下方按鈕開啟相機</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* 隱藏的 canvas 用於捕獲畫面 */}
-                <canvas ref={canvasRef} className="hidden" />
-                
-                {/* 狀態指示器 - 移到畫面外 */}
-                {stream && (
-                  <div className="flex flex-col gap-2 items-center w-full mt-4">
-                    {/* 光線狀態 */}
-                    <div className={`px-6 py-2 rounded-full font-semibold text-base shadow-lg ${
-                      lightingStatus.status === 'good'
-                        ? 'bg-yellow-400 text-gray-800'
-                        : lightingStatus.status === 'warning'
-                        ? 'bg-yellow-500 text-white'
-                        : 'bg-slate-600 text-white'
-                    }`}>
-                      Lighting {lightingStatus.text}
-                    </div>
-                    
-                    {/* 角度狀態 */}
-                    <div className={`px-6 py-2 rounded-full font-semibold text-base shadow-lg ${
-                      angleStatus.status === 'good'
-                        ? 'bg-orange-400 text-white'
-                        : angleStatus.status === 'warning'
-                        ? 'bg-orange-500 text-white'
-                        : 'bg-slate-600 text-white'
-                    }`}>
-                      Look Straight {angleStatus.text === 'Good' ? '' : angleStatus.text}
-                    </div>
-                    
-                    {/* 距離狀態 */}
-                    <div className={`px-6 py-2 rounded-full font-semibold text-base shadow-lg ${
-                      distanceStatus.status === 'good'
-                        ? 'bg-green-400 text-white'
-                        : distanceStatus.status === 'warning'
-                        ? 'bg-green-500 text-white'
-                        : 'bg-slate-600 text-white'
-                    }`}>
-                      Face Position {distanceStatus.text}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 控制按鈕 */}
-              <div className="flex flex-col sm:flex-row justify-center gap-3 px-4">
-                {!stream ? (
-                  <button
-                    onClick={startCamera}
-                    className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-3xl font-bold text-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-2"
-                  >
-                    <BiCamera className="w-7 h-7" />
-                    即時檢測
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={captureAndAnalyze}
-                      disabled={!faceDetected || isAnalyzing}
-                      className={`w-full sm:w-auto px-10 py-4 rounded-3xl font-bold text-lg transition-all shadow-xl flex items-center justify-center gap-2 ${
-                        faceDetected && !isAnalyzing
-                          ? 'bg-blue-400 text-white hover:bg-blue-500 hover:shadow-2xl'
-                          : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                      }`}
-                    >
-                      <BiCamera className="w-7 h-7" />
-                      {isAnalyzing ? '分析中...' : '拍照並分析'}
-                    </button>
-                    <button
-                      onClick={stopCamera}
-                      className="w-full sm:w-auto px-10 py-4 bg-white border-2 border-slate-400 text-slate-700 rounded-3xl font-bold text-lg hover:bg-slate-100 transition-all shadow-lg"
-                    >
-                      <BiX className="inline w-7 h-7 mr-1" />
-                      關閉相機
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* 提示訊息 */}
-              {stream && !faceDetected && (
-                <div className="text-center bg-orange-100 rounded-2xl p-5 border-2 border-orange-300 mx-4">
-                  <div className="flex items-center justify-center gap-2 text-orange-700">
-                    <FiAlertCircle className="w-6 h-6" />
-                    <span className="font-semibold text-base">
-                      請調整位置，確保光線充足、正面角度、適當距離
-                    </span>
-                  </div>
-                </div>
-              )}
+              <p className="text-sm text-slate-500">
+                僅支援 JPG/JPEG 格式，檔案大小 ≤ 5MB
+              </p>
+            </div>
+          ) : (
+            <div className="relative">
+              <img
+                src={previewUrl}
+                alt="預覽"
+                className="w-full max-w-md mx-auto rounded-xl shadow-lg"
+              />
+              <button
+                onClick={removeImage}
+                className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+              >
+                <BiX className="w-6 h-6" />
+              </button>
             </div>
           )}
 
-          {/* 上傳模式 */}
-          {!cameraMode && (
-            <div>
-              <h2 className="text-2xl font-semibold text-center mb-6 text-slate-800">
-                上傳照片檢測
-              </h2>
-              <p className="text-center text-slate-600 mb-4">
-                請上傳清晰的正面肌膚照片，光線充足效果更佳
-              </p>
-              <div className="text-center text-sm text-slate-500 mb-6 space-y-1">
-                <p>📋 圖片要求：JPG/JPEG 格式，最大 5MB</p>
-                <p>📐 解析度：200x200 至 4096x4096 像素</p>
-                <p>👤 建議臉部像素大於 400px，正面角度（偏轉 ≤ ±30°，俯仰 ≤ ±40°）</p>
-              </div>
-
-              {!previewUrl ? (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  className="border-3 border-dashed border-purple-300 rounded-xl p-12 text-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/jpg"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <BiUpload className="w-16 h-16 mx-auto text-purple-400 mb-4" />
-                  <p className="text-lg text-slate-700 mb-2">
-                    點擊上傳照片或拖曳檔案至此
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    僅支援 JPG/JPEG 格式，檔案大小 ≤ 5MB
-                  </p>
-                </div>
-              ) : (
-                <div className="relative">
-                  <img
-                    src={previewUrl}
-                    alt="預覽"
-                    className="w-full max-w-md mx-auto rounded-xl shadow-lg"
-                  />
-                  <button
-                    onClick={removeImage}
-                    className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                  >
-                    <BiX className="w-6 h-6" />
-                  </button>
-                </div>
-              )}
-
-              {previewUrl && !isAnalyzing && (
-                <button
-                  onClick={() => analyzeImage(selectedImage)}
-                  className="mt-8 w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold text-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-2"
-                >
-                  <BiCamera className="w-6 h-6" />
-                  開始分析
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* 錯誤訊息 */}
           {error && (
             <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center gap-2">
               <FiAlertCircle className="w-5 h-5" />
@@ -898,7 +752,16 @@ const SkinAnalysis = () => {
             </div>
           )}
 
-          {/* 分析進度 */}
+          {previewUrl && !isAnalyzing && (
+            <button
+              onClick={analyzeImage}
+              className="mt-8 w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold text-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-2"
+            >
+              <BiCamera className="w-6 h-6" />
+              開始分析
+            </button>
+          )}
+
           {isAnalyzing && (
             <div className="mt-8 text-center">
               <div className="w-16 h-16 mx-auto mb-4 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
@@ -969,9 +832,13 @@ const SkinAnalysis = () => {
 
             {(() => {
               const categorized = categorizeAnalysis(analysisResult.analysis);
+              console.log('分類後的數據:', categorized);
               
+              // 計算總項目數
               const totalItems = Object.values(categorized).reduce((sum, items) => sum + items.length, 0);
+              console.log('總項目數:', totalItems);
               
+              // 如果沒有任何項目,顯示提示
               if (totalItems === 0) {
                 return (
                   <div className="text-center py-8 text-slate-500">
@@ -986,9 +853,11 @@ const SkinAnalysis = () => {
                   {Object.entries(categorized).map(([category, items]) => {
                     if (items.length === 0) return null;
                     
+                    // 檢查是否有需要注意的項目
                     const hasIssues = items.some(item => item.data?.value >= 1);
                     const issueCount = items.filter(item => item.data?.value >= 1).length;
                     
+                    // 在摘要模式下,如果沒有問題則跳過此分類
                     if (!showAllDetails && !hasIssues) return null;
                     
                     return (
@@ -1006,6 +875,7 @@ const SkinAnalysis = () => {
                             const status = getStatusByValue(item.data.value);
                             const confidence = getConfidenceLevel(item.data.confidence);
                             
+                            // 在摘要模式下,只顯示有問題的項目
                             if (!showAllDetails && item.data.value === 0) return null;
                             
                             return (
@@ -1042,6 +912,7 @@ const SkinAnalysis = () => {
                     );
                   })}
                   
+                  {/* 如果摘要模式下沒有任何需要注意的項目 */}
                   {!showAllDetails && 
                    Object.values(categorized).every(items => 
                      items.every(item => item.data?.value === 0)
@@ -1089,10 +960,7 @@ const SkinAnalysis = () => {
           {/* 動作按鈕 */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => {
-                setAnalysisResult(null);
-                setError(null);
-              }}
+              onClick={removeImage}
               className="px-8 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full font-semibold hover:bg-purple-50 transition-colors"
             >
               重新檢測
