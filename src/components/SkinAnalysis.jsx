@@ -32,7 +32,30 @@ const SKIN_ANALYSIS_LABELS = {
   mole: '痣',
   skin_type: '膚質',
   left_eyelids: '左眼皮',
-  right_eyelids: '右眼皮'
+  right_eyelids: '右眼皮',
+  skin_color: '膚色',
+  closed_comedones: '閉口粉刺',
+  skintone_ita: '膚色 ITA 值',
+  skin_hue_ha: '膚色 HA 值',
+  eye_pouch_severity: '眼袋嚴重度',
+  nasolabial_fold_severity: '法令紋嚴重度',
+  sensitivity: '敏感度'
+};
+
+/**
+ * 獲取膚質標籤
+ */
+const getSkinTypeLabel = (type) => {
+  const types = ['油性肌膚', '乾性肌膚', '中性肌膚', '混合性肌膚'];
+  return types[type] || '未知';
+};
+
+/**
+ * 獲取膚色標籤
+ */
+const getSkinColorLabel = (color) => {
+  const colors = ['白皙', '黃調', '棕調', '黑調'];
+  return colors[color] || '未知';
 };
 
 /**
@@ -166,10 +189,11 @@ const SkinAnalysis = () => {
   const [stream, setStream] = useState(null);
   
   // 即時檢測狀態
-  const [lightingStatus, setLightingStatus] = useState({ status: 'checking', text: '檢測中' });
-  const [angleStatus, setAngleStatus] = useState({ status: 'checking', text: '檢測中' });
-  const [distanceStatus, setDistanceStatus] = useState({ status: 'checking', text: '檢測中' });
+  const [lightingStatus, setLightingStatus] = useState({ status: 'checking', text: '檢測中', color: 'gray' });
+  const [distanceStatus, setDistanceStatus] = useState({ status: 'checking', text: '檢測中', color: 'gray' });
   const [faceDetected, setFaceDetected] = useState(false);
+  const [greenStatusTime, setGreenStatusTime] = useState(0);
+  const [autoCapturing, setAutoCapturing] = useState(false);
   
   // 上傳模式狀態
   const [selectedImage, setSelectedImage] = useState(null);
@@ -186,6 +210,19 @@ const SkinAnalysis = () => {
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const detectionIntervalRef = useRef(null);
+  
+  // Refs for tracking state inside intervals
+  const isAnalyzingRef = useRef(false);
+  const autoCapturingRef = useRef(false);
+
+  // Sync refs with state
+  useEffect(() => {
+    isAnalyzingRef.current = isAnalyzing;
+  }, [isAnalyzing]);
+
+  useEffect(() => {
+    autoCapturingRef.current = autoCapturing;
+  }, [autoCapturing]);
 
   // 清理相機資源
   useEffect(() => {
@@ -206,9 +243,10 @@ const SkinAnalysis = () => {
     }
     setCameraActive(false);
     setFaceDetected(false);
-    setLightingStatus({ status: 'checking', text: '檢測中' });
-    setAngleStatus({ status: 'checking', text: '檢測中' });
-    setDistanceStatus({ status: 'checking', text: '檢測中' });
+    setLightingStatus({ status: 'checking', text: '檢測中', color: 'gray' });
+    setDistanceStatus({ status: 'checking', text: '檢測中', color: 'gray' });
+    setGreenStatusTime(0);
+    setAutoCapturing(false);
     if (detectionIntervalRef.current) {
       clearInterval(detectionIntervalRef.current);
       detectionIntervalRef.current = null;
@@ -247,38 +285,172 @@ const SkinAnalysis = () => {
     }, 1000); // 從 500ms 改為 1000ms，減少更新頻率
   };
 
-  // 檢測臉部品質（模擬）
+  // 檢測臉部品質（基於視訊畫面分析）
   const detectFaceQuality = () => {
-    // 實際應用中這裡會使用 face-api.js 或類似庫進行真實檢測
-    // 這裡使用模擬數據
+    if (!videoRef.current || !canvasRef.current) return;
     
-    const hasGoodLighting = Math.random() > 0.2;
-    const hasGoodAngle = Math.random() > 0.3;
-    const hasGoodDistance = Math.random() > 0.25;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
     
-    setLightingStatus(
-      hasGoodLighting 
-        ? { status: 'good', text: 'Ok' }
-        : { status: 'warning', text: '請移至光線充足處' }
-    );
+    // 確保視訊已載入
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
     
-    setAngleStatus(
-      hasGoodAngle
-        ? { status: 'good', text: 'Good' }
-        : { status: 'warning', text: '請保持正面' }
-    );
+    // 設置 canvas 尺寸為較小的採樣尺寸以提升性能
+    const sampleWidth = 160;
+    const sampleHeight = 120;
+    canvas.width = sampleWidth;
+    canvas.height = sampleHeight;
     
-    setDistanceStatus(
-      hasGoodDistance
-        ? { status: 'good', text: '距離適中' }
-        : { status: 'warning', text: 'Come Closer' }
-    );
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, sampleWidth, sampleHeight);
     
-    setFaceDetected(hasGoodLighting && hasGoodAngle && hasGoodDistance);
+    try {
+      const imageData = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
+      const data = imageData.data;
+      
+      // 1. 光線檢測：分析臉部區域的光線品質
+      // 定義橢圓參數（對應 UI 上的白色橢圓框）
+      const centerX = sampleWidth / 2;
+      const centerY = sampleHeight / 2;
+      const radiusX = sampleWidth * 0.35; // 橢圓水平半徑
+      const radiusY = sampleHeight * 0.48; // 橢圓垂直半徑
+      
+      let ovalPixelCount = 0;
+      let ovalContentPixels = 0;
+      let ovalBrightnessSum = 0;
+      let ovalBrightnessCount = 0;
+      let overexposedPixels = 0;
+      let underexposedPixels = 0;
+      
+      // 分析橢圓內的像素（同時進行光線和臉部位置檢測）
+      for (let y = 0; y < sampleHeight; y++) {
+        for (let x = 0; x < sampleWidth; x++) {
+          // 檢查點是否在橢圓內
+          const normalizedX = (x - centerX) / radiusX;
+          const normalizedY = (y - centerY) / radiusY;
+          const isInOval = (normalizedX * normalizedX + normalizedY * normalizedY) <= 1;
+          
+          if (isInOval) {
+            ovalPixelCount++;
+            const idx = (y * sampleWidth + x) * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
+            
+            // 累計亮度用於光線檢測
+            ovalBrightnessSum += brightness;
+            ovalBrightnessCount++;
+            
+            // 檢測過曝和欠曝
+            if (brightness > 230) {
+              overexposedPixels++;
+            } else if (brightness < 30) {
+              underexposedPixels++;
+            }
+            
+            // 檢測是否有實質內容（非純黑或純白背景）
+            // 膚色範圍大致在 RGB 中偏暖色調，亮度適中
+            const isLikelyFace = brightness > 60 && brightness < 220 && 
+                                 r > 80 && g > 60 && b > 50 && 
+                                 r > b; // 膚色紅色分量通常大於藍色
+            
+            if (isLikelyFace) {
+              ovalContentPixels++;
+            }
+          }
+        }
+      }
+      
+      // 計算橢圓內的平均亮度
+      const ovalAvgBrightness = ovalBrightnessCount > 0 ? ovalBrightnessSum / ovalBrightnessCount : 0;
+      const lightingScore = ovalAvgBrightness / 255; // 標準化到 0-1
+      
+      // 計算過曝/欠曝比例
+      const overexposureRatio = ovalPixelCount > 0 ? overexposedPixels / ovalPixelCount : 0;
+      const underexposureRatio = ovalPixelCount > 0 ? underexposedPixels / ovalPixelCount : 0;
+      
+      // 光線評估（優化版）：考慮亮度和曝光問題
+      let newLightingStatus;
+      
+      // 檢查過曝問題（超過 20% 像素過曝）
+      if (overexposureRatio > 0.2) {
+        newLightingStatus = { status: 'bad', text: '光線過強', color: 'red' };
+      }
+      // 檢查欠曝問題（超過 30% 像素欠曝）
+      else if (underexposureRatio > 0.3 || lightingScore < 0.25) {
+        newLightingStatus = { status: 'bad', text: '光線不足', color: 'red' };
+      }
+      // 亮度偏低但還可接受
+      else if (lightingScore < 0.40) {
+        newLightingStatus = { status: 'warning', text: '請移至光線充足處', color: 'yellow' };
+      }
+      // 亮度略高但還在可接受範圍
+      else if (lightingScore > 0.75) {
+        newLightingStatus = { status: 'warning', text: '光線稍強', color: 'yellow' };
+      }
+      // 理想亮度範圍（40-75%）
+      else {
+        newLightingStatus = { status: 'good', text: '良好', color: 'green' };
+      }
+      
+      // 2. 臉部位置檢測
+      // 計算橢圓內的臉部覆蓋率
+      const faceOvalCoverage = ovalPixelCount > 0 ? ovalContentPixels / ovalPixelCount : 0;
+      
+      // 臉部位置評估：確保臉部至少佔橢圓 60% 面積
+      // 紅(0-0.35)、黃(0.35-0.60)、綠(0.60-1)
+      let newDistanceStatus;
+      if (faceOvalCoverage >= 0.60) {
+        newDistanceStatus = { status: 'good', text: '位置正確', color: 'green' };
+      } else if (faceOvalCoverage >= 0.35) {
+        newDistanceStatus = { status: 'warning', text: '請將臉靠近一些', color: 'yellow' };
+      } else {
+        newDistanceStatus = { status: 'bad', text: '請將臉移入框內', color: 'red' };
+      }
+      
+      setLightingStatus(newLightingStatus);
+      setDistanceStatus(newDistanceStatus);
+      
+      const bothGreen = newLightingStatus.color === 'green' && newDistanceStatus.color === 'green';
+      setFaceDetected(bothGreen);
+      
+      // 自動拍照邏輯：兩個指標都是綠色持續 2 秒
+      if (bothGreen) {
+        setGreenStatusTime(prev => {
+          const newTime = prev + 1; // 每秒增加 1（檢測間隔為 1000ms）
+          
+          // 使用 Ref 檢查狀態，避免閉包導致的舊狀態問題
+          if (newTime >= 2 && !autoCapturingRef.current && !isAnalyzingRef.current) {
+            // 達到 2 秒，觸發自動拍照
+            setAutoCapturing(true);
+            // 立即更新 ref 以防止在下一次渲染前重複觸發
+            autoCapturingRef.current = true;
+            
+            setTimeout(() => {
+              captureAndAnalyze();
+            }, 100);
+          }
+          return newTime;
+        });
+      } else {
+        setGreenStatusTime(0);
+        setAutoCapturing(false);
+        autoCapturingRef.current = false;
+      }
+      
+    } catch (error) {
+      // 發生錯誤時使用保守的狀態
+      setLightingStatus({ status: 'checking', text: '檢測中', color: 'gray' });
+      setDistanceStatus({ status: 'checking', text: '檢測中', color: 'gray' });
+    }
   };
 
   // 拍照並分析
   const captureAndAnalyze = async () => {
+    // 防止重複調用
+    if (isAnalyzingRef.current) return;
+
     if (!videoRef.current || !canvasRef.current) {
       setError('相機未就緒');
       return;
@@ -464,8 +636,16 @@ const SkinAnalysis = () => {
       const formData = new FormData();
       formData.append('image', file);
 
+      // 取得認證 token
+      const accessToken = localStorage.getItem('accessToken');
+      const headers = {};
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/analyze`, {
         method: 'POST',
+        headers,
         body: formData,
       });
 
@@ -581,10 +761,36 @@ const SkinAnalysis = () => {
 
     Object.entries(data.analysis).forEach(([key, value]) => {
       const label = SKIN_ANALYSIS_LABELS[key] || key;
+      
+      // Skip keys that don't have a valid value object or are handled elsewhere
+      if (key === 'skin_age' || key === 'face_rectangle') return;
+
       if (value && typeof value === 'object') {
-        const status = getStatusByValue(value.value);
-        const confidence = (value.confidence * 100).toFixed(1);
-        report += `${label}: ${status.text} (可信度: ${confidence}%)\n`;
+        let statusText = '';
+        let confidenceText = '';
+
+        // Special handling for different field types
+        if (['acne', 'mole', 'skin_spot', 'blackhead', 'closed_comedones'].includes(key)) {
+            const count = value.rectangle ? value.rectangle.length : (value.value || 0);
+            statusText = `${count} 處`;
+        } else if (key === 'skin_type') {
+            statusText = getSkinTypeLabel(value.skin_type);
+        } else if (key === 'skin_color') {
+            statusText = getSkinColorLabel(value.skin_color);
+        } else if (['skintone_ita', 'skin_hue_ha'].includes(key)) {
+            statusText = value.value?.toFixed(2) || 'N/A';
+        } else if (value.value !== undefined) {
+             statusText = getStatusByValue(value.value).text;
+        } else {
+            statusText = 'N/A';
+        }
+
+        // Confidence handling
+        if (value.confidence !== undefined) {
+            confidenceText = `(可信度: ${(value.confidence * 100).toFixed(1)}%)`;
+        }
+
+        report += `${label}: ${statusText} ${confidenceText}\n`;
       }
     });
 
@@ -621,11 +827,11 @@ const SkinAnalysis = () => {
   const categorizeAnalysis = (analysis) => {
     const categories = {
       毛孔: ['pores_left_cheek', 'pores_right_cheek', 'pores_forehead', 'pores_jaw'],
-      皺紋: ['nasolabial_fold', 'forehead_wrinkle', 'eye_finelines', 'crows_feet', 'glabella_wrinkle'],
-      眼周: ['eye_pouch', 'dark_circle', 'left_eyelids', 'right_eyelids'],
-      色素: ['skin_spot', 'mole'],
-      痘痘: ['acne', 'blackhead'],
-      其他: ['skin_type']
+      皺紋: ['nasolabial_fold', 'forehead_wrinkle', 'eye_finelines', 'crows_feet', 'glabella_wrinkle', 'nasolabial_fold_severity'],
+      眼周: ['eye_pouch', 'dark_circle', 'left_eyelids', 'right_eyelids', 'eye_pouch_severity'],
+      色素: ['skin_spot', 'mole', 'skin_color', 'skintone_ita', 'skin_hue_ha'],
+      痘痘: ['acne', 'blackhead', 'closed_comedones'],
+      其他: ['skin_type', 'sensitivity']
     };
 
     const result = {};
@@ -647,22 +853,12 @@ const SkinAnalysis = () => {
       {/* 頁首 */}
       <div className="text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent mb-4">
-          AI 智慧肌膚檢測
+          (功能開發中.... 目前為測試版) <br /> <br /> AI 智慧肌膚檢測 
         </h1>
         <p className="text-xl text-slate-600 mb-6">
           運用尖端科技,洞察肌膚真實狀態
         </p>
 
-        <div className="max-w-3xl mx-auto bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-6 border border-orange-200 mb-8">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <FiStar className="w-6 h-6 text-red-500" />
-            <h3 className="text-xl font-semibold text-red-800">九紫離火運與美麗新契機</h3>
-          </div>
-          <p className="text-slate-700 leading-relaxed">
-            從 2024 年開始,我們進入「九紫離火運」時代,這是一個強調光明、智慧與美學的二十年週期。
-            透過科技了解自己的肌膚,正是順應時代能量,以智慧之光照亮美麗之路的最佳體現。
-          </p>
-        </div>
       </div>
 
       {/* 檢測區域 */}
@@ -670,27 +866,27 @@ const SkinAnalysis = () => {
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-purple-100">
           {/* 模式切換 */}
           <div className="flex justify-center mb-6">
-            <div className="inline-flex rounded-2xl border-2 border-purple-200 p-1.5 bg-purple-50 shadow-md">
+            <div className="flex w-full max-w-md rounded-2xl border-2 border-purple-200 p-1.5 bg-purple-50 shadow-md">
               <button
                 onClick={() => cameraMode || switchMode()}
-                className={`px-8 py-3 rounded-xl transition-all font-semibold ${
+                className={`flex-1 py-3 rounded-xl transition-all font-semibold text-sm sm:text-base flex items-center justify-center ${
                   cameraMode
                     ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
                     : 'text-slate-600 hover:text-purple-600'
                 }`}
               >
-                <BiCamera className="inline w-6 h-6 mr-2" />
+                <BiCamera className="inline w-5 h-5 mr-1 sm:mr-2" />
                 即時檢測
               </button>
               <button
                 onClick={() => !cameraMode || switchMode()}
-                className={`px-8 py-3 rounded-xl transition-all font-semibold ${
+                className={`flex-1 py-3 rounded-xl transition-all font-semibold text-sm sm:text-base flex items-center justify-center ${
                   !cameraMode
                     ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
                     : 'text-slate-600 hover:text-purple-600'
                 }`}
               >
-                <BiUpload className="inline w-6 h-6 mr-2" />
+                <BiUpload className="inline w-5 h-5 mr-1 sm:mr-2" />
                 上傳照片
               </button>
             </div>
@@ -739,39 +935,45 @@ const SkinAnalysis = () => {
                 
                 {/* 狀態指示器 - 移到畫面外 */}
                 {stream && (
-                  <div className="flex flex-col gap-2 items-center w-full mt-4">
+                  <div className="flex flex-col gap-3 items-center w-full mt-4">
                     {/* 光線狀態 */}
-                    <div className={`px-6 py-2 rounded-full font-semibold text-base shadow-lg ${
-                      lightingStatus.status === 'good'
-                        ? 'bg-yellow-400 text-gray-800'
-                        : lightingStatus.status === 'warning'
-                        ? 'bg-yellow-500 text-white'
-                        : 'bg-slate-600 text-white'
-                    }`}>
-                      Lighting {lightingStatus.text}
-                    </div>
-                    
-                    {/* 角度狀態 */}
-                    <div className={`px-6 py-2 rounded-full font-semibold text-base shadow-lg ${
-                      angleStatus.status === 'good'
-                        ? 'bg-orange-400 text-white'
-                        : angleStatus.status === 'warning'
-                        ? 'bg-orange-500 text-white'
-                        : 'bg-slate-600 text-white'
-                    }`}>
-                      Look Straight {angleStatus.text === 'Good' ? '' : angleStatus.text}
-                    </div>
-                    
-                    {/* 距離狀態 */}
-                    <div className={`px-6 py-2 rounded-full font-semibold text-base shadow-lg ${
-                      distanceStatus.status === 'good'
-                        ? 'bg-green-400 text-white'
-                        : distanceStatus.status === 'warning'
+                    <div className={`px-6 py-2 rounded-full font-semibold text-base shadow-lg transition-all ${
+                      lightingStatus.color === 'green'
                         ? 'bg-green-500 text-white'
+                        : lightingStatus.color === 'yellow'
+                        ? 'bg-yellow-500 text-gray-900'
+                        : lightingStatus.color === 'red'
+                        ? 'bg-red-500 text-white'
                         : 'bg-slate-600 text-white'
                     }`}>
-                      Face Position {distanceStatus.text}
+                      💡 Lighting: {lightingStatus.text}
                     </div>
+                    
+                    {/* 臉部位置狀態 */}
+                    <div className={`px-6 py-2 rounded-full font-semibold text-base shadow-lg transition-all ${
+                      distanceStatus.color === 'green'
+                        ? 'bg-green-500 text-white'
+                        : distanceStatus.color === 'yellow'
+                        ? 'bg-yellow-500 text-gray-900'
+                        : distanceStatus.color === 'red'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-slate-600 text-white'
+                    }`}>
+                      📍 Face Position: {distanceStatus.text}
+                    </div>
+                    
+                    {/* 自動拍照倒數提示 */}
+                    {greenStatusTime > 0 && greenStatusTime < 2 && (
+                      <div className="px-6 py-2 bg-blue-500 text-white rounded-full font-bold text-lg shadow-lg animate-pulse">
+                        ✓ 保持不動 {2 - greenStatusTime} 秒
+                      </div>
+                    )}
+                    
+                    {autoCapturing && (
+                      <div className="px-6 py-2 bg-purple-500 text-white rounded-full font-bold text-lg shadow-lg animate-pulse">
+                        📸 正在拍攝...
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -986,8 +1188,19 @@ const SkinAnalysis = () => {
                   {Object.entries(categorized).map(([category, items]) => {
                     if (items.length === 0) return null;
                     
-                    const hasIssues = items.some(item => item.data?.value >= 1);
-                    const issueCount = items.filter(item => item.data?.value >= 1).length;
+                    const isIssue = (item) => {
+                      if (['acne', 'mole', 'skin_spot', 'blackhead', 'closed_comedones'].includes(item.key)) {
+                          const count = item.data.rectangle ? item.data.rectangle.length : (item.data.value || 0);
+                          return count > 0;
+                      }
+                      if (['skin_type', 'skin_color', 'skintone_ita', 'skin_hue_ha', 'sensitivity'].includes(item.key)) {
+                          return false;
+                      }
+                      return item.data?.value >= 1;
+                    };
+
+                    const hasIssues = items.some(isIssue);
+                    const issueCount = items.filter(isIssue).length;
                     
                     if (!showAllDetails && !hasIssues) return null;
                     
@@ -1003,10 +1216,42 @@ const SkinAnalysis = () => {
                         </div>
                         <div className="grid md:grid-cols-2 gap-3">
                           {items.map(item => {
-                            const status = getStatusByValue(item.data.value);
-                            const confidence = getConfidenceLevel(item.data.confidence);
+                            let status = { text: '未知', color: 'text-gray-600', bgColor: 'bg-gray-50', icon: '?' };
+                            let displayValue = null;
+                            let isSeverityField = false;
+
+                            // Handle different types
+                            if (['acne', 'mole', 'skin_spot', 'blackhead', 'closed_comedones'].includes(item.key)) {
+                              const count = item.data.rectangle ? item.data.rectangle.length : (item.data.value || 0);
+                              status = {
+                                text: `${count} 處`,
+                                color: count > 0 ? 'text-orange-600' : 'text-green-600',
+                                bgColor: count > 0 ? 'bg-orange-50' : 'bg-green-50',
+                                icon: count > 0 ? '!' : '✓'
+                              };
+                              displayValue = count;
+                              isSeverityField = true; // Treat count > 0 as an issue
+                            } else if (item.key === 'skin_type') {
+                              const label = getSkinTypeLabel(item.data.skin_type);
+                              status = { text: label, color: 'text-blue-600', bgColor: 'bg-blue-50', icon: 'ℹ' };
+                            } else if (item.key === 'skin_color') {
+                              const label = getSkinColorLabel(item.data.skin_color);
+                              status = { text: label, color: 'text-blue-600', bgColor: 'bg-blue-50', icon: 'ℹ' };
+                            } else if (['skintone_ita', 'skin_hue_ha'].includes(item.key)) {
+                              const val = item.data.value?.toFixed(2) || 'N/A';
+                              status = { text: val, color: 'text-gray-600', bgColor: 'bg-gray-50', icon: '#' };
+                            } else if (item.data.value !== undefined) {
+                              status = getStatusByValue(item.data.value);
+                              displayValue = item.data.value;
+                              isSeverityField = true;
+                            }
+
+                            const confidence = item.data.confidence !== undefined 
+                              ? getConfidenceLevel(item.data.confidence) 
+                              : 'N/A';
                             
-                            if (!showAllDetails && item.data.value === 0) return null;
+                            // Filter logic
+                            if (!showAllDetails && isSeverityField && displayValue === 0) return null;
                             
                             return (
                               <div
@@ -1029,7 +1274,7 @@ const SkinAnalysis = () => {
                                     可信度: {confidence}
                                   </span>
                                 </div>
-                                {showAllDetails && (
+                                {showAllDetails && item.data.confidence !== undefined && (
                                   <div className="mt-2 text-xs text-slate-500">
                                     信心值: {(item.data.confidence * 100).toFixed(1)}%
                                   </div>

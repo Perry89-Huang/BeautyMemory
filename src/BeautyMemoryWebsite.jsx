@@ -16,19 +16,17 @@ import {
 } from 'react-icons/bi';
 import { FiStar } from 'react-icons/fi';
 
+
 // 導入新的肌膚檢測組件
 import SkinAnalysis from './components/SkinAnalysis';
+import LotusBeautyAICustomerService from './components/LotusBeautyAICustomerService';
+
+
 
 function BeautyMemoryWebsite() {
   // 視圖狀態管理
   const [currentView, setCurrentView] = useState('home'); // 'home' 或 'skin-analysis'
-  
-  // 原有的狀態...
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState(null);
 
-  // 原有的功能...
   const handleAnalysisClick = () => {
     // 切換到肌膚檢測頁面
     setCurrentView('skin-analysis');
@@ -256,6 +254,9 @@ function BeautyMemoryWebsite() {
           <SkinAnalysis />
         </div>
       )}
+
+      {/* AI 智能客服 */}
+      <LotusBeautyAICustomerService />
     </div>
   );
 }
