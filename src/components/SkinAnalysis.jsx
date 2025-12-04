@@ -874,12 +874,12 @@ const SkinAnalysis = () => {
 
   const categorizeAnalysis = (analysis) => {
     const categories = {
-      毛孔: ['pores_left_cheek', 'pores_right_cheek', 'pores_forehead', 'pores_jaw'],
-      皺紋: ['nasolabial_fold', 'forehead_wrinkle', 'eye_finelines', 'crows_feet', 'glabella_wrinkle', 'nasolabial_fold_severity'],
-      眼周: ['eye_pouch', 'dark_circle', 'left_eyelids', 'right_eyelids', 'eye_pouch_severity'],
-      色素: ['skin_spot', 'mole', 'skin_color', 'skintone_ita', 'skin_hue_ha'],
-      痘痘: ['acne', 'blackhead', 'closed_comedones'],
-      其他: ['skin_type', 'sensitivity', 'skin_age', 'face_maps']
+      '🕳️ 毛孔': ['pores_left_cheek', 'pores_right_cheek', 'pores_forehead', 'pores_jaw'],
+      '👵 皺紋': ['nasolabial_fold', 'forehead_wrinkle', 'eye_finelines', 'crows_feet', 'glabella_wrinkle', 'nasolabial_fold_severity'],
+      '👁️ 眼周': ['eye_pouch', 'dark_circle', 'left_eyelids', 'right_eyelids', 'eye_pouch_severity'],
+      '🎨 色素': ['skin_spot', 'mole', 'skin_color', 'skintone_ita', 'skin_hue_ha'],
+      '🔴 痘痘': ['acne', 'blackhead', 'closed_comedones'],
+      '📊 其他': ['skin_type', 'sensitivity', 'skin_age', 'face_maps']
     };
 
     const result = {};
@@ -1204,16 +1204,21 @@ const SkinAnalysis = () => {
 
           {/* 詳細分析 */}
           <div className="bg-white rounded-2xl p-6 shadow-lg border border-purple-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-slate-800">
-                📊 詳細分析結果
-              </h3>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-800 mb-1">
+                  🔍 詳細分析結果
+                </h3>
+                <p className="text-sm text-slate-500">
+                  {showAllDetails ? '顯示所有項目' : '僅顯示需要注意的項目'}
+                </p>
+              </div>
               <button
                 onClick={() => setShowAllDetails(!showAllDetails)}
-                className="text-purple-600 hover:text-purple-700 text-sm flex items-center gap-1"
+                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-sm font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-md flex items-center gap-2"
               >
                 <BiInfoCircle className="w-4 h-4" />
-                {showAllDetails ? '顯示摘要' : '查看全部'}
+                {showAllDetails ? '收起' : '展開全部'}
               </button>
             </div>
 
@@ -1254,13 +1259,15 @@ const SkinAnalysis = () => {
                     if (!showAllDetails && !hasIssues) return null;
                     
                     return (
-                      <div key={category} className="border-l-4 border-purple-300 pl-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-semibold text-slate-700">{category}</h4>
+                      <div key={category} className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border-l-4 border-purple-400">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-bold text-slate-800">{category}</h4>
                           {!showAllDetails && issueCount > 0 && (
-                            <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
-                              {issueCount} 項需注意
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-orange-600 bg-orange-100 px-3 py-1.5 rounded-full border-2 border-orange-300 shadow-sm">
+                                ⚠️ {issueCount} 項需注意
+                              </span>
+                            </div>
                           )}
                         </div>
                         <div className="grid md:grid-cols-2 gap-3">
@@ -1335,29 +1342,61 @@ const SkinAnalysis = () => {
                                     setShowRedAreaMap(true);
                                   }
                                 }}
-                                className={`${status.bgColor} rounded-lg p-3 border border-gray-200 ${
-                                  item.key === 'face_maps' && item.data.red_area ? 'cursor-pointer hover:shadow-md transition-shadow' : ''
+                                className={`${status.bgColor} rounded-xl p-4 border-2 ${
+                                  displayValue === 0 ? 'border-green-200' : displayValue >= 2 ? 'border-red-200' : 'border-orange-200'
+                                } ${
+                                  item.key === 'face_maps' && item.data.red_area ? 'cursor-pointer hover:shadow-lg hover:scale-105 transition-all' : 'hover:shadow-md transition-shadow'
                                 }`}
                               >
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-sm font-medium text-slate-700">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-base font-bold text-slate-800">
                                     {item.label}
                                   </span>
-                                  <span className={`text-lg ${status.color} font-bold`}>
+                                  <span className={`text-2xl ${status.color} font-bold`}>
                                     {status.icon}
                                   </span>
                                 </div>
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className={`${status.color} font-semibold`}>
-                                    {status.text}
-                                  </span>
-                                  <span className="text-slate-500">
-                                    可信度: {confidence}
-                                  </span>
+                                <div className="mb-2">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className={`${status.color} font-bold text-sm`}>
+                                      {status.text}
+                                    </span>
+                                    {item.data.confidence !== undefined && (
+                                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                        item.data.confidence >= 0.9 ? 'bg-green-100 text-green-700' :
+                                        item.data.confidence >= 0.7 ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-red-100 text-red-700'
+                                      }`}>
+                                        {confidence}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {/* Progress bar for severity items */}
+                                  {isSeverityField && displayValue !== null && (
+                                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                      <div 
+                                        className={`h-full transition-all duration-500 ${
+                                          displayValue === 0 ? 'bg-green-500' :
+                                          displayValue === 1 ? 'bg-yellow-500' :
+                                          displayValue === 2 ? 'bg-orange-500' :
+                                          'bg-red-500'
+                                        }`}
+                                        style={{ width: `${Math.min(displayValue * 33.33, 100)}%` }}
+                                      ></div>
+                                    </div>
+                                  )}
                                 </div>
                                 {showAllDetails && item.data.confidence !== undefined && (
-                                  <div className="mt-2 text-xs text-slate-500">
-                                    信心值: {(item.data.confidence * 100).toFixed(1)}%
+                                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200">
+                                    <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                      <div 
+                                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
+                                        style={{ width: `${(item.data.confidence * 100)}%` }}
+                                      ></div>
+                                    </div>
+                                    <span className="text-xs text-slate-600 font-semibold">
+                                      {(item.data.confidence * 100).toFixed(0)}%
+                                    </span>
                                   </div>
                                 )}
                               </div>
