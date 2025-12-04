@@ -1188,17 +1188,163 @@ const SkinAnalysis = () => {
             </div>
           </div>
 
-          {/* 肌膚年齡 */}
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-purple-100">
-            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-800">
-              <BiHeart className="w-6 h-6 text-pink-500" />
-              肌膚年齡
+          {/* 分析總結 */}
+          <div className="bg-white rounded-2xl p-6 shadow-xl border-2 border-purple-200">
+            <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+              <span className="text-3xl">📋</span>
+              分析總結
             </h3>
-            <div className="text-center">
-              <span className="text-5xl font-bold text-purple-600">
-                {analysisResult.skin_age}
-              </span>
-              <span className="text-2xl text-slate-600 ml-2">歲</span>
+            
+            <div className="grid md:grid-cols-3 gap-4 mb-6">
+              {/* 基礎狀態 */}
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border-2 border-blue-200">
+                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <span className="text-xl">🎨</span>
+                  基礎狀態
+                </h4>
+                <div className="space-y-2 text-sm">
+                  {analysisResult.analysis.skin_color && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">膚色</span>
+                      <span className="font-semibold text-slate-800">
+                        {getSkinColorLabel(analysisResult.analysis.skin_color.value || analysisResult.analysis.skin_color.skin_color)}
+                      </span>
+                    </div>
+                  )}
+                  {analysisResult.analysis.skin_age && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">肌膚年齡</span>
+                      <span className="font-bold text-blue-600 text-lg">
+                        {analysisResult.analysis.skin_age.value || analysisResult.skin_age} 歲
+                      </span>
+                    </div>
+                  )}
+                  {analysisResult.analysis.skin_type && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">膚質</span>
+                      <span className="font-semibold text-slate-800">
+                        {getSkinTypeLabel(analysisResult.analysis.skin_type.skin_type)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 老化指標 */}
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 border-2 border-orange-200">
+                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <span className="text-xl">👵</span>
+                  老化指標
+                </h4>
+                <div className="space-y-2 text-sm">
+                  {(() => {
+                    const wrinkles = ['forehead_wrinkle', 'crows_feet', 'eye_finelines', 'nasolabial_fold'];
+                    const detected = wrinkles.filter(key => analysisResult.analysis[key]?.value >= 1);
+                    return (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">皺紋檢測</span>
+                          <span className={`font-bold text-lg ${detected.length > 2 ? 'text-red-600' : detected.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                            {detected.length} 項
+                          </span>
+                        </div>
+                        {detected.length > 0 && (
+                          <div className="text-xs text-slate-500 mt-2">
+                            發現：{detected.map(k => SKIN_ANALYSIS_LABELS[k]).join('、')}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* 瑕疵與敏感 */}
+              <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-4 border-2 border-red-200">
+                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <span className="text-xl">🔴</span>
+                  瑕疵與敏感
+                </h4>
+                <div className="space-y-2 text-sm">
+                  {(() => {
+                    const blemishes = ['acne', 'skin_spot', 'blackhead', 'closed_comedones'];
+                    const totalCount = blemishes.reduce((sum, key) => {
+                      const data = analysisResult.analysis[key];
+                      if (data?.rectangle) return sum + data.rectangle.length;
+                      if (data?.value) return sum + data.value;
+                      return sum;
+                    }, 0);
+                    
+                    return (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">斑點/痘痘</span>
+                          <span className={`font-bold text-lg ${totalCount > 5 ? 'text-red-600' : totalCount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                            {totalCount} 處
+                          </span>
+                        </div>
+                        {analysisResult.analysis.sensitivity && (
+                          <div className="mt-2">
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">敏感度</span>
+                              <span className={`font-semibold ${
+                                analysisResult.analysis.sensitivity.sensitivity_intensity > 50 ? 'text-red-600' : 'text-orange-600'
+                              }`}>
+                                {analysisResult.analysis.sensitivity.sensitivity_intensity.toFixed(0)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* 專業總結範例 */}
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-5 border-2 border-purple-200">
+              <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <span className="text-xl">💬</span>
+                專業總結
+              </h4>
+              <p className="text-slate-700 leading-relaxed">
+                {(() => {
+                  const score = analysisResult.overall_score;
+                  const age = analysisResult.skin_age;
+                  const wrinkles = ['forehead_wrinkle', 'crows_feet', 'nasolabial_fold'].filter(k => analysisResult.analysis[k]?.value >= 1);
+                  const blemishes = ['acne', 'skin_spot'].reduce((sum, k) => {
+                    const data = analysisResult.analysis[k];
+                    return sum + (data?.rectangle?.length || data?.value || 0);
+                  }, 0);
+                  
+                  let summary = `根據 AI 深度分析，您的肌膚整體評分為 ${score} 分，肌膚年齡為 ${age} 歲。`;
+                  
+                  if (wrinkles.length > 0) {
+                    summary += ` 檢測到 ${wrinkles.map(k => SKIN_ANALYSIS_LABELS[k]).join('、')} 等老化跡象，建議加強抗老保養。`;
+                  }
+                  
+                  if (blemishes > 5) {
+                    summary += ` 發現多處色斑與痘痘問題，需要針對性護理。`;
+                  } else if (blemishes > 0) {
+                    summary += ` 有少量瑕疵，持續保養可改善。`;
+                  }
+                  
+                  if (analysisResult.analysis.sensitivity?.sensitivity_intensity > 50) {
+                    summary += ` 肌膚敏感度較高，建議採用溫和舒緩產品。`;
+                  }
+                  
+                  if (score >= 85) {
+                    summary += ` 整體狀態優異，請繼續保持良好習慣！`;
+                  } else if (score >= 70) {
+                    summary += ` 肌膚狀態良好，持續保養可達到更佳效果。`;
+                  } else {
+                    summary += ` 建議參考下方個人化建議，加強日常保養。`;
+                  }
+                  
+                  return summary;
+                })()}
+              </p>
             </div>
           </div>
 
@@ -1431,6 +1577,239 @@ const SkinAnalysis = () => {
               );
             })()}
           </div>
+
+          {/* 專業個人化保養建議與荷顏產品推薦 */}
+          {(() => {
+            // Generate product recommendations based on skin analysis
+            const generateProductRecommendations = () => {
+              const recommendations = [];
+              const analysis = analysisResult.analysis;
+              
+              // Get analysis data
+              const hasWrinkles = 
+                (analysis.wrinkle_detection_result?.value > 0) ||
+                (analysis.wrinkle_forehead_severity?.value > 0) ||
+                (analysis.wrinkle_glabella_severity?.value > 0) ||
+                (analysis.wrinkle_crows_feet_severity?.value > 0) ||
+                (analysis.wrinkle_nasolabial_fold_severity?.value > 0);
+              
+              const hasDarkSpots = 
+                (analysis.dark_circle_severity?.value > 0) ||
+                (analysis.pigmentation?.value > 0) ||
+                (analysis.spots?.value > 0);
+              
+              const hasDryness = 
+                (analysis.skin_type?.value === 1); // 乾性肌膚
+              
+              const hasSensitivity = 
+                (analysis.sensitivity?.value > 0) ||
+                (analysis.red_area_severity?.value > 0);
+              
+              const hasAcne = 
+                (analysis.acne?.value > 0) ||
+                (analysis.acne_severity?.value > 0);
+              
+              // A. 老化與黯沉問題
+              if (hasWrinkles || hasDarkSpots) {
+                recommendations.push({
+                  type: 'aging_dullness',
+                  title: '🌟 老化與黯沉改善方案',
+                  description: '您的肌膚顯示出老化或黯沉的跡象，建議使用以下荷顏產品組合來改善：',
+                  products: [
+                    {
+                      name: '煥采肌活蛋白霜',
+                      benefit: '深層滋養，提升肌膚彈性，減少細紋',
+                      usage: '早晚清潔後，取適量均勻塗抹於臉部'
+                    },
+                    {
+                      name: '靚膚液升級版',
+                      benefit: '促進肌膚新陳代謝，改善黯沉，提亮膚色',
+                      usage: '清潔後第一步使用，輕拍至吸收'
+                    },
+                    {
+                      name: '精華液',
+                      benefit: '高濃度活性成分，深入修護老化肌膚',
+                      usage: '化妝水後使用，重點加強於皺紋部位'
+                    }
+                  ]
+                });
+              }
+              
+              // B. 黯沉與斑點問題
+              if (hasDarkSpots && !hasWrinkles) {
+                recommendations.push({
+                  type: 'dullness_spots',
+                  title: '✨ 提亮淡斑專屬方案',
+                  description: '針對黯沉與色素沉澱，為您規劃專業美白方案：',
+                  products: [
+                    {
+                      name: '防曬隔離霜',
+                      benefit: '阻擋紫外線，預防色素沉澱加重',
+                      usage: '白天出門前使用，每2-3小時補擦'
+                    },
+                    {
+                      name: '煥采肌活蛋白霜',
+                      benefit: '淡化色斑，均勻膚色，恢復透亮光澤',
+                      usage: '早晚清潔後使用'
+                    },
+                    {
+                      name: 'SOD面膜',
+                      benefit: '強效抗氧化，加速黑色素代謝',
+                      usage: '每週2-3次，敷15-20分鐘'
+                    }
+                  ]
+                });
+              }
+              
+              // C. 乾燥與屏障受損
+              if (hasDryness) {
+                recommendations.push({
+                  type: 'dryness_barrier',
+                  title: '💧 保濕修護強化方案',
+                  description: '您的肌膚偏乾燥，需要加強保濕與屏障修護：',
+                  products: [
+                    {
+                      name: '精華液',
+                      benefit: '深層補水，修護肌膚屏障',
+                      usage: '化妝水後使用，可局部加強乾燥部位'
+                    },
+                    {
+                      name: '靚膚液升級版',
+                      benefit: '提升肌膚吸收力，鎖住水分',
+                      usage: '清潔後第一步使用'
+                    },
+                    {
+                      name: '養顏乳',
+                      benefit: '長效保濕，形成保護膜，防止水分流失',
+                      usage: '精華液後使用，鎖住所有養分'
+                    }
+                  ]
+                });
+              }
+              
+              // D. 敏感與不適
+              if (hasSensitivity || hasAcne) {
+                recommendations.push({
+                  type: 'sensitivity',
+                  title: '🌿 舒緩鎮定溫和方案',
+                  description: '您的肌膚較為敏感，建議使用溫和舒緩的產品組合：',
+                  products: [
+                    {
+                      name: '溫和清潔',
+                      benefit: '不刺激，溫和清潔，維持肌膚pH值',
+                      usage: '早晚清潔，避免過度搓揉'
+                    },
+                    {
+                      name: 'SOD面膜',
+                      benefit: '舒緩鎮定，減少紅腫與不適感',
+                      usage: '敏感時期可增加使用頻率至每日一次'
+                    },
+                    {
+                      name: '靚膚液升級版',
+                      benefit: '強化肌膚防禦力，降低敏感反應',
+                      usage: '清潔後立即使用，幫助肌膚穩定'
+                    }
+                  ]
+                });
+              }
+              
+              // If no specific issues detected, provide general care
+              if (recommendations.length === 0) {
+                recommendations.push({
+                  type: 'maintenance',
+                  title: '✅ 日常保養維持方案',
+                  description: '您的肌膚狀態良好！建議持續以下日常保養：',
+                  products: [
+                    {
+                      name: '靚膚液升級版',
+                      benefit: '維持肌膚健康，預防老化',
+                      usage: '每日早晚使用'
+                    },
+                    {
+                      name: '防曬隔離霜',
+                      benefit: '預防光老化，保持肌膚年輕',
+                      usage: '白天外出必備'
+                    },
+                    {
+                      name: 'SOD面膜',
+                      benefit: '定期深層保養，維持最佳狀態',
+                      usage: '每週1-2次'
+                    }
+                  ]
+                });
+              }
+              
+              return recommendations;
+            };
+            
+            const productRecommendations = generateProductRecommendations();
+            
+            return (
+              <div className="space-y-6">
+                <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 rounded-2xl p-6 shadow-xl border-2 border-purple-200">
+                  <h3 className="text-2xl font-bold mb-2 flex items-center gap-3 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    <span className="text-3xl">💎</span>
+                    專業個人化保養建議與荷顏產品推薦
+                  </h3>
+                  <p className="text-slate-600 mb-6">
+                    根據您的肌膚檢測報告，我們為您量身打造專屬保養方案
+                  </p>
+                  
+                  <div className="space-y-6">
+                    {productRecommendations.map((recommendation, recIndex) => (
+                      <div key={recIndex} className="bg-white rounded-xl p-6 shadow-lg border border-purple-100">
+                        <h4 className="text-xl font-bold mb-3 text-purple-700">
+                          {recommendation.title}
+                        </h4>
+                        <p className="text-slate-600 mb-4 text-sm">
+                          {recommendation.description}
+                        </p>
+                        
+                        <div className="space-y-4">
+                          {recommendation.products.map((product, prodIndex) => (
+                            <div key={prodIndex} className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
+                              <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
+                                  {prodIndex + 1}
+                                </div>
+                                <div className="flex-1">
+                                  <h5 className="font-bold text-lg text-purple-700 mb-1">
+                                    荷顏 {product.name}
+                                  </h5>
+                                  <p className="text-slate-700 text-sm mb-2">
+                                    <span className="font-semibold text-purple-600">功效：</span>
+                                    {product.benefit}
+                                  </p>
+                                  <p className="text-slate-600 text-sm">
+                                    <span className="font-semibold text-pink-600">使用方式：</span>
+                                    {product.usage}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="mt-4 pt-4 border-t border-purple-200">
+                          <p className="text-xs text-slate-500 flex items-center gap-2">
+                            <BiCheckCircle className="w-4 h-4 text-green-500" />
+                            建議連續使用28天，即可看到明顯改善效果
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-6 bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-4 border-l-4 border-orange-500">
+                    <p className="text-sm text-slate-700">
+                      <span className="font-bold text-orange-700">💡 小提醒：</span>
+                      每個人的肌膚狀況不同，建議先進行小範圍測試。若使用期間有任何不適，請立即停用並諮詢專業人員。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* 建議事項 */}
           <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6 shadow-lg border border-yellow-200">
