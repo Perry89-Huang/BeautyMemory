@@ -39,7 +39,9 @@ const SKIN_ANALYSIS_LABELS = {
   skin_hue_ha: '膚色 HA 值',
   eye_pouch_severity: '眼袋嚴重度',
   nasolabial_fold_severity: '法令紋嚴重度',
-  sensitivity: '敏感度'
+  sensitivity: '敏感度',
+  skin_age: '肌膚年齡',
+  face_maps: '肌膚色譜圖'
 };
 
 /**
@@ -205,6 +207,7 @@ const SkinAnalysis = () => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [error, setError] = useState(null);
   const [showAllDetails, setShowAllDetails] = useState(false);
+  const [showRedAreaMap, setShowRedAreaMap] = useState(false);
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -643,7 +646,7 @@ const SkinAnalysis = () => {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/analyze`, {
+      const response = await fetch(`${API_BASE_URL}/api/analysis/analyze`, {
         method: 'POST',
         headers,
         body: formData,
@@ -679,9 +682,37 @@ const SkinAnalysis = () => {
             recommendations = backendRecs;
           }
           
-          rawAnalysis = data.data.analysis?.result || {};
+          // 正確解析分析數據：analysis.result 才是真正的肌膚數據
+          rawAnalysis = data.data.analysis?.result || data.data.analysis || {};
+          
+          // 添加 face_maps 和 sensitivity（它們不在 result 裡面）
+          if (data.data.analysis?.face_maps) {
+            rawAnalysis.face_maps = data.data.analysis.face_maps;
+          }
+          if (data.data.analysis?.sensitivity) {
+            rawAnalysis.sensitivity = data.data.analysis.sensitivity;
+          }
+          
+          // 調試輸出
+          console.log('📊 分析數據結構:', {
+            hasAnalysis: !!data.data.analysis,
+            hasResult: !!data.data.analysis?.result,
+            hasFaceMaps: !!data.data.analysis?.face_maps,
+            hasSensitivity: !!data.data.analysis?.sensitivity,
+            analysisKeys: Object.keys(rawAnalysis),
+            sampleData: Object.keys(rawAnalysis).slice(0, 3)
+          });
         } else {
           rawAnalysis = data.data?.analysis?.result || data.data?.result || data.data?.analysis || {};
+          
+          // 添加 face_maps 和 sensitivity（它們不在 result 裡面）
+          if (data.data?.analysis?.face_maps) {
+            rawAnalysis.face_maps = data.data.analysis.face_maps;
+          }
+          if (data.data?.analysis?.sensitivity) {
+            rawAnalysis.sensitivity = data.data.analysis.sensitivity;
+          }
+          
           overall_score = calculateOverallScore(rawAnalysis);
           skin_age = estimateSkinAge(rawAnalysis);
           recommendations = generateRecommendations(rawAnalysis);
@@ -695,6 +726,13 @@ const SkinAnalysis = () => {
           face_rectangle: data.data?.face_rectangle || data.data?.analysis?.face_rectangle,
           raw_data: data.data
         };
+        
+        console.log('✅ 處理後的分析結果:', {
+          overall_score,
+          skin_age,
+          analysisKeys: Object.keys(rawAnalysis),
+          recommendationsCount: recommendations?.length
+        });
         
         setAnalysisResult(processedData);
         
@@ -763,7 +801,7 @@ const SkinAnalysis = () => {
       const label = SKIN_ANALYSIS_LABELS[key] || key;
       
       // Skip keys that don't have a valid value object or are handled elsewhere
-      if (key === 'skin_age' || key === 'face_rectangle') return;
+      if (key === 'face_rectangle' || key === 'face_maps') return;
 
       if (value && typeof value === 'object') {
         let statusText = '';
@@ -777,8 +815,18 @@ const SkinAnalysis = () => {
             statusText = getSkinTypeLabel(value.skin_type);
         } else if (key === 'skin_color') {
             statusText = getSkinColorLabel(value.skin_color);
+        } else if (key === 'sensitivity') {
+            if (value.sensitivity_area !== undefined && value.sensitivity_intensity !== undefined) {
+              const area = (value.sensitivity_area * 100).toFixed(1);
+              const intensity = value.sensitivity_intensity.toFixed(1);
+              statusText = `面積 ${area}% / 強度 ${intensity}`;
+            } else {
+              statusText = 'N/A';
+            }
+        } else if (key === 'skin_age') {
+            statusText = `${value.value || 'N/A'} 歲`;
         } else if (['skintone_ita', 'skin_hue_ha'].includes(key)) {
-            statusText = value.value?.toFixed(2) || 'N/A';
+            statusText = value.ITA?.toFixed(2) || value.HA?.toFixed(2) || 'N/A';
         } else if (value.value !== undefined) {
              statusText = getStatusByValue(value.value).text;
         } else {
@@ -831,7 +879,7 @@ const SkinAnalysis = () => {
       眼周: ['eye_pouch', 'dark_circle', 'left_eyelids', 'right_eyelids', 'eye_pouch_severity'],
       色素: ['skin_spot', 'mole', 'skin_color', 'skintone_ita', 'skin_hue_ha'],
       痘痘: ['acne', 'blackhead', 'closed_comedones'],
-      其他: ['skin_type', 'sensitivity']
+      其他: ['skin_type', 'sensitivity', 'skin_age', 'face_maps']
     };
 
     const result = {};
@@ -1193,7 +1241,8 @@ const SkinAnalysis = () => {
                           const count = item.data.rectangle ? item.data.rectangle.length : (item.data.value || 0);
                           return count > 0;
                       }
-                      if (['skin_type', 'skin_color', 'skintone_ita', 'skin_hue_ha', 'sensitivity'].includes(item.key)) {
+                      // These are informational fields, not issues
+                      if (['skin_type', 'skin_color', 'skintone_ita', 'skin_hue_ha', 'sensitivity', 'skin_age', 'face_maps'].includes(item.key)) {
                           return false;
                       }
                       return item.data?.value >= 1;
@@ -1237,8 +1286,33 @@ const SkinAnalysis = () => {
                             } else if (item.key === 'skin_color') {
                               const label = getSkinColorLabel(item.data.skin_color);
                               status = { text: label, color: 'text-blue-600', bgColor: 'bg-blue-50', icon: 'ℹ' };
+                            } else if (item.key === 'sensitivity') {
+                              // Handle sensitivity object with area and intensity
+                              if (item.data.sensitivity_area !== undefined && item.data.sensitivity_intensity !== undefined) {
+                                const area = (item.data.sensitivity_area * 100).toFixed(1);
+                                const intensity = item.data.sensitivity_intensity.toFixed(1);
+                                status = { 
+                                  text: `面積 ${area}% / 強度 ${intensity}`, 
+                                  color: intensity > 50 ? 'text-red-600' : 'text-yellow-600', 
+                                  bgColor: intensity > 50 ? 'bg-red-50' : 'bg-yellow-50', 
+                                  icon: intensity > 50 ? '⚠️' : 'ℹ' 
+                                };
+                              } else {
+                                status = { text: 'N/A', color: 'text-gray-600', bgColor: 'bg-gray-50', icon: '?' };
+                              }
+                            } else if (item.key === 'skin_age') {
+                              // Handle skin_age object
+                              const ageValue = item.data.value || 'N/A';
+                              status = { text: `${ageValue} 歲`, color: 'text-blue-600', bgColor: 'bg-blue-50', icon: '📅' };
+                            } else if (item.key === 'face_maps') {
+                              // Handle face_maps - show if red_area exists
+                              if (item.data.red_area) {
+                                status = { text: '點擊查看', color: 'text-purple-600', bgColor: 'bg-purple-50', icon: '🗺️' };
+                              } else {
+                                status = { text: 'N/A', color: 'text-gray-600', bgColor: 'bg-gray-50', icon: '?' };
+                              }
                             } else if (['skintone_ita', 'skin_hue_ha'].includes(item.key)) {
-                              const val = item.data.value?.toFixed(2) || 'N/A';
+                              const val = item.data.ITA?.toFixed(2) || item.data.HA?.toFixed(2) || 'N/A';
                               status = { text: val, color: 'text-gray-600', bgColor: 'bg-gray-50', icon: '#' };
                             } else if (item.data.value !== undefined) {
                               status = getStatusByValue(item.data.value);
@@ -1256,7 +1330,14 @@ const SkinAnalysis = () => {
                             return (
                               <div
                                 key={item.key}
-                                className={`${status.bgColor} rounded-lg p-3 border border-gray-200`}
+                                onClick={() => {
+                                  if (item.key === 'face_maps' && item.data.red_area) {
+                                    setShowRedAreaMap(true);
+                                  }
+                                }}
+                                className={`${status.bgColor} rounded-lg p-3 border border-gray-200 ${
+                                  item.key === 'face_maps' && item.data.red_area ? 'cursor-pointer hover:shadow-md transition-shadow' : ''
+                                }`}
                               >
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-sm font-medium text-slate-700">
@@ -1349,6 +1430,68 @@ const SkinAnalysis = () => {
               <BiDownload className="w-5 h-5" />
               儲存報告
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 紅區圖模態框 */}
+      {showRedAreaMap && analysisResult?.analysis?.face_maps?.red_area && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowRedAreaMap(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-bold text-slate-800">
+                  🗺️ 肌膚敏感區域熱力圖
+                </h3>
+                <button
+                  onClick={() => setShowRedAreaMap(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <BiX className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <img
+                  src={`data:image/jpeg;base64,${analysisResult.analysis.face_maps.red_area}`}
+                  alt="紅區圖"
+                  className="w-full rounded-lg shadow-lg"
+                />
+                
+                {analysisResult.analysis.sensitivity && (
+                  <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-4 border border-red-200">
+                    <h4 className="font-semibold text-slate-800 mb-3">敏感度分析</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-slate-600 mb-1">敏感區域面積</p>
+                        <p className="text-2xl font-bold text-red-600">
+                          {(analysisResult.analysis.sensitivity.sensitivity_area * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-600 mb-1">紅腫強度</p>
+                        <p className="text-2xl font-bold text-orange-600">
+                          {analysisResult.analysis.sensitivity.sensitivity_intensity.toFixed(1)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <p className="text-sm text-slate-700">
+                    <span className="font-semibold">💡 說明：</span>
+                    紅色區域表示肌膚較為敏感或有發紅現象，建議使用溫和的舒緩保養品，避免刺激性成分。
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

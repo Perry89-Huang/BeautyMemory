@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { BiUser, BiLogOut, BiCamera, BiHistory, BiTrophy } from 'react-icons/bi';
 import MemberAuth from './components/MemberAuth';
+import SkinAnalysis from './components/SkinAnalysis';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000';
 
@@ -11,6 +12,9 @@ function BeautyMemoryWebsiteWithAuth() {
   // 狀態管理
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
+  const [showSkinAnalysis, setShowSkinAnalysis] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyRecords, setHistoryRecords] = useState([]);
   const [quota, setQuota] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -26,13 +30,35 @@ function BeautyMemoryWebsiteWithAuth() {
     
     if (token && userData && userData !== 'undefined') {
       try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        // 取得配額資訊
-        await fetchQuota(token);
+        // 驗證 token 是否有效
+        const response = await fetch(`${API_BASE_URL}/api/members/quota`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          // Token 有效，設置用戶資料
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          // 取得配額資訊
+          const data = await response.json();
+          setQuota(data.data);
+        } else {
+          // Token 無效，清除本地資料
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          setUser(null);
+          setQuota(null);
+        }
       } catch (e) {
-        console.error('解析用戶資料失敗:', e);
+        // 發生錯誤，清除本地資料
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
+        setUser(null);
+        setQuota(null);
       }
     }
   };
@@ -83,9 +109,11 @@ function BeautyMemoryWebsiteWithAuth() {
 
     try {
       // 檢查權限
+      const token = localStorage.getItem('accessToken');
+      
       const permissionResponse = await fetch(`${API_BASE_URL}/api/analysis/check-permission`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -103,25 +131,11 @@ function BeautyMemoryWebsiteWithAuth() {
         return;
       }
 
-      // 可以進行分析 - 開啟檔案選擇
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      
-      input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) {
-          setIsLoading(false);
-          return;
-        }
-
-        await performAnalysis(file);
-      };
-
-      input.click();
+      // 可以進行分析 - 顯示相機掃臉畫面
+      setShowSkinAnalysis(true);
+      setIsLoading(false);
 
     } catch (error) {
-      console.error('檢查權限錯誤:', error);
       alert('❌ 發生錯誤,請稍後再試');
       setIsLoading(false);
     }
@@ -203,8 +217,10 @@ ${fengShui.blessing}
       return;
     }
 
+    setIsLoading(true);
+
     try {
-      const response = await fetch(`${API_BASE_URL}/api/analysis/history?limit=5`, {
+      const response = await fetch(`${API_BASE_URL}/api/analysis/history?limit=10`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -217,29 +233,45 @@ ${fengShui.blessing}
         
         if (records.length === 0) {
           alert('📭 您還沒有分析記錄\n\n立即開始第一次肌膚檢測吧!');
+          setIsLoading(false);
           return;
         }
 
-        const historyMessage = `
-📚 您的分析記錄 (最近 ${records.length} 筆)
-
-${records.map((record, index) => `
-${index + 1}. ${new Date(record.created_at).toLocaleDateString('zh-TW')}
-   評分: ${record.overall_score}/100
-   ${record.feng_shui_element} 元素
-`).join('\n')}
-
-總共 ${data.data.pagination.total} 筆記錄
-        `.trim();
-
-        alert(historyMessage);
+        setHistoryRecords(records);
+        setShowHistory(true);
       }
 
     } catch (error) {
-      console.error('查詢歷史錯誤:', error);
-      alert('❌ 查詢失敗');
+      alert('❌ 查詢失敗，請稍後再試');
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  // 如果顯示肌膚分析畫面
+  if (showSkinAnalysis) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-red-50">
+        {/* 返回按鈕 */}
+        <div className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-40 px-4 py-3">
+          <button
+            onClick={() => {
+              setShowSkinAnalysis(false);
+              // 重新獲取配額
+              fetchQuota(localStorage.getItem('accessToken'));
+            }}
+            className="flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors"
+          >
+            <span>←</span>
+            <span>返回首頁</span>
+          </button>
+        </div>
+        
+        {/* 肌膚分析組件 */}
+        <SkinAnalysis />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-red-50">
@@ -489,6 +521,118 @@ ${index + 1}. ${new Date(record.created_at).toLocaleDateString('zh-TW')}
         onClose={() => setShowAuth(false)}
         onLoginSuccess={handleLoginSuccess}
       />
+
+      {/* 歷史記錄 Modal */}
+      {showHistory && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <BiHistory className="w-8 h-8" />
+                  <div>
+                    <h2 className="text-2xl font-bold">分析歷史記錄</h2>
+                    <p className="text-purple-100 text-sm">您的肌膚檢測歷程</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              <div className="space-y-4">
+                {historyRecords.map((record, index) => (
+                  <div
+                    key={record.id}
+                    className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-5 border border-purple-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="bg-purple-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                            {index + 1}
+                          </span>
+                          <div>
+                            <p className="text-lg font-semibold text-gray-800">
+                              {new Date(record.created_at).toLocaleString('zh-TW', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {record.feng_shui_element} 元素 · {record.feng_shui_blessing}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                          <div className="bg-white rounded-lg p-3 text-center">
+                            <p className="text-2xl font-bold text-purple-600">{record.overall_score}</p>
+                            <p className="text-xs text-gray-600">整體評分</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 text-center">
+                            <p className="text-2xl font-bold text-pink-600">{record.hydration_score || '-'}</p>
+                            <p className="text-xs text-gray-600">水潤度</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 text-center">
+                            <p className="text-2xl font-bold text-orange-600">{record.radiance_score || '-'}</p>
+                            <p className="text-xs text-gray-600">光澤度</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 text-center">
+                            <p className="text-2xl font-bold text-indigo-600">{record.firmness_score || '-'}</p>
+                            <p className="text-xs text-gray-600">緊緻度</p>
+                          </div>
+                        </div>
+
+                        {record.image_url && (
+                          <div className="mt-3">
+                            <img
+                              src={record.image_url}
+                              alt="檢測照片"
+                              className="rounded-lg max-h-32 object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {historyRecords.length === 0 && (
+                <div className="text-center py-12">
+                  <BiHistory className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg">還沒有分析記錄</p>
+                  <p className="text-gray-400 text-sm mt-2">立即開始您的第一次肌膚檢測吧！</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 p-4 flex justify-between items-center border-t">
+              <p className="text-sm text-gray-600">
+                共 {historyRecords.length} 筆記錄
+              </p>
+              <button
+                onClick={() => setShowHistory(false)}
+                className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-medium hover:from-purple-600 hover:to-pink-600 transition-all"
+              >
+                關閉
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
