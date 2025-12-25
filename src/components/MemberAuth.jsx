@@ -18,6 +18,7 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
   // 重置表單
   useEffect(() => {
@@ -31,6 +32,7 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
       });
       setErrors({});
       setMessage({ type: '', text: '' });
+      setRegistrationSuccess(false);
     }
   }, [isOpen]);
 
@@ -49,8 +51,8 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
     // 密碼驗證
     if (!formData.password) {
       newErrors.password = '請輸入密碼';
-    } else if (formData.password.length < 6) {
-      newErrors.password = '密碼至少需要 6 個字元';
+    } else if (formData.password.length < 8) {
+      newErrors.password = '密碼至少需要 8 個字元';
     }
 
     // 註冊模式額外驗證
@@ -120,7 +122,7 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
 
         setMessage({ 
           type: 'success', 
-          text: '登入成功!正在為您跳轉...' 
+          text: '登入成功！正在為您跳轉...' 
         });
 
         // 通知父元件登入成功
@@ -130,9 +132,20 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
         }, 1000);
 
       } else {
+        // 翻譯常見的英文錯誤訊息
+        let errorMsg = data.error?.message || '登入失敗，請重試';
+        if (errorMsg.includes('Invalid email or password')) {
+          errorMsg = '帳號或密碼錯誤，請重新輸入';
+        } else if (errorMsg.includes('User is not verified')) {
+          errorMsg = '帳號尚未驗證，請檢查您的 Email 信箱完成驗證';
+        } else if (errorMsg.includes('User not found')) {
+          errorMsg = '此帳號不存在，請先註冊';
+        } else if (errorMsg.includes('Too many requests')) {
+          errorMsg = '登入次數過多，請稍後再試';
+        }
         setMessage({ 
           type: 'error', 
-          text: data.error?.message || '登入失敗,請重試' 
+          text: errorMsg
         });
       }
 
@@ -140,7 +153,7 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
       console.error('登入錯誤:', error);
       setMessage({ 
         type: 'error', 
-        text: '網路錯誤,請稍後再試' 
+        text: '網路連線錯誤，請檢查您的網路後再試' 
       });
     } finally {
       setIsLoading(false);
@@ -174,9 +187,10 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
 
       if (data.success) {
         if (data.data.requiresVerification) {
+          setRegistrationSuccess(true);
           setMessage({ 
             type: 'success', 
-            text: '註冊成功! 請檢查您的 Email 信箱並完成驗證後登入。' 
+            text: '註冊成功！請檢查您的 Email 信箱並完成驗證後登入' 
           });
           // 不自動登入，讓用戶去收信
         } else {
@@ -186,7 +200,7 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
 
           setMessage({ 
             type: 'success', 
-            text: `註冊成功!恭喜獲得 ${data.data.welcomeBonus?.freeAnalyses || 3} 次免費檢測` 
+            text: `🎉 註冊成功！恭喜獲得 ${data.data.welcomeBonus?.freeAnalyses || 3} 次免費肌膚檢測` 
           });
 
           // 通知父元件註冊成功
@@ -197,9 +211,20 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
         }
 
       } else {
+        // 翻譯常見的英文錯誤訊息
+        let errorMsg = data.error?.message || '註冊失敗，請重試';
+        if (errorMsg.includes('Email already in use') || errorMsg.includes('already exists')) {
+          errorMsg = '此 Email 已被註冊，請使用其他 Email 或直接登入';
+        } else if (errorMsg.includes('Password is too short')) {
+          errorMsg = '密碼太短，請使用至少 8 個字元';
+        } else if (errorMsg.includes('Password too weak') || errorMsg.includes('password')) {
+          errorMsg = '密碼強度不足，請使用至少 8 個字元（建議包含大小寫字母、數字）';
+        } else if (errorMsg.includes('Invalid email')) {
+          errorMsg = 'Email 格式不正確，請檢查後重新輸入';
+        }
         setMessage({ 
           type: 'error', 
-          text: data.error?.message || '註冊失敗,請重試' 
+          text: errorMsg
         });
       }
 
@@ -207,7 +232,7 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
       console.error('註冊錯誤:', error);
       setMessage({ 
         type: 'error', 
-        text: '網路錯誤,請稍後再試' 
+        text: '網路連線錯誤，請檢查您的網路後再試' 
       });
     } finally {
       setIsLoading(false);
@@ -356,7 +381,7 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
                       ? 'border-red-300 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-purple-500'
                   }`}
-                  placeholder="至少 6 個字元"
+                  placeholder="至少 8 個字元"
                 />
               </div>
               {errors.password && (
@@ -394,7 +419,7 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
             {/* 提交按鈕 */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || (mode === 'register' && registrationSuccess)}
               className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
@@ -403,7 +428,12 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  處理中...
+                  {mode === 'login' ? '登入中...' : '註冊中...'}
+                </span>
+              ) : registrationSuccess && mode === 'register' ? (
+                <span className="flex items-center justify-center gap-2">
+                  <BiCheck className="w-5 h-5" />
+                  已發送驗證信
                 </span>
               ) : (
                 mode === 'login' ? '登入' : '註冊'
@@ -418,6 +448,7 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
                 setMode(mode === 'login' ? 'register' : 'login');
                 setErrors({});
                 setMessage({ type: '', text: '' });
+                setRegistrationSuccess(false);
               }}
               className="text-sm text-purple-600 hover:text-purple-700 font-medium"
             >

@@ -10,6 +10,7 @@ import {
   BiInfoCircle
 } from 'react-icons/bi';
 import { FiStar, FiAlertCircle } from 'react-icons/fi';
+import { getTaiwanTimestamp, getTaiwanDateString } from '../utils/timezone';
 
 /**
  * 肌膚分析項目的中文對照表
@@ -144,36 +145,93 @@ const generateRecommendations = (analysisData) => {
   const recommendations = [];
   
   if (!analysisData || typeof analysisData !== 'object') {
-    return ['建議定期進行肌膚檢測,追蹤肌膚狀態變化'];
+    return ['建議定期進行肌膚檢測，追蹤肌膚狀態變化，及早發現問題'];
   }
   
+  // 1. 毛孔問題分析
   const poresIssues = ['pores_left_cheek', 'pores_right_cheek', 'pores_forehead', 'pores_jaw']
     .filter(key => analysisData[key]?.value >= 1);
   if (poresIssues.length > 0) {
-    recommendations.push('建議使用含有菸鹼酸或水楊酸的產品收斂毛孔,避免過度清潔');
+    const severity = Math.max(...poresIssues.map(key => analysisData[key]?.value || 0));
+    if (severity >= 2) {
+      recommendations.push('🔳 毛孔粗大較明顯：建議使用荷顏靚膚液升級版搭配精華液，深層清潔並收斂毛孔。避免過度清潔導致油脂分泌失衡');
+    } else {
+      recommendations.push('🔳 毛孔輕微擴張：使用荷顏靚膚液升級版調理肌膚，維持水油平衡，預防毛孔粗大惡化');
+    }
   }
   
-  const wrinkleIssues = ['nasolabial_fold', 'forehead_wrinkle', 'crows_feet', 'glabella_wrinkle']
+  // 2. 皺紋與老化分析
+  const wrinkleIssues = ['wrinkle_nasolabial_fold_severity', 'wrinkle_forehead_severity', 'wrinkle_crows_feet_severity', 'wrinkle_glabella_severity']
     .filter(key => analysisData[key]?.value >= 1);
   if (wrinkleIssues.length > 0) {
-    recommendations.push('建議使用含有維他命 A (視黃醇) 或胜肽成分的抗老產品');
+    const wrinkleTypes = [];
+    if (analysisData.wrinkle_forehead_severity?.value >= 1) wrinkleTypes.push('額頭紋');
+    if (analysisData.wrinkle_glabella_severity?.value >= 1) wrinkleTypes.push('眉間紋');
+    if (analysisData.wrinkle_crows_feet_severity?.value >= 1) wrinkleTypes.push('魚尾紋');
+    if (analysisData.wrinkle_nasolabial_fold_severity?.value >= 1) wrinkleTypes.push('法令紋');
+    
+    recommendations.push(`👵 檢測到${wrinkleTypes.join('、')}：建議使用荷顏煥采肌活蛋白霜配合精華液，深層修護肌膚彈性。早晚使用，重點加強紋路部位，並搭配按摩手法促進吸收`);
   }
   
-  if (analysisData.eye_pouch?.value >= 1 || analysisData.dark_circle?.value >= 1) {
-    recommendations.push('建議使用眼霜加強眼周保養,保持充足睡眠,可搭配眼部按摩');
+  // 3. 眼周問題分析
+  const hasEyeIssues = analysisData.eye_pouch?.value >= 1 || analysisData.dark_circle_severity?.value >= 1;
+  if (hasEyeIssues) {
+    const issues = [];
+    if (analysisData.eye_pouch?.value >= 1) issues.push('眼袋');
+    if (analysisData.dark_circle_severity?.value >= 1) issues.push('黑眼圈');
+    recommendations.push(`👁️ ${issues.join('與')}問題：建議使用荷顏精華液加強眼周保養，輕柔按摩促進循環。保持每日 7-8 小時優質睡眠，避免長時間使用 3C 產品`);
   }
   
-  if (analysisData.skin_spot?.value >= 1) {
-    recommendations.push('建議使用含有維他命 C 或傳明酸的美白精華,並加強防曬 (SPF 50+)');
+  // 4. 色素與斑點分析
+  const hasPigmentation = analysisData.pigmentation?.value >= 1 || analysisData.spots?.value >= 1;
+  if (hasPigmentation) {
+    const pigmentLevel = Math.max(analysisData.pigmentation?.value || 0, analysisData.spots?.value || 0);
+    if (pigmentLevel >= 2) {
+      recommendations.push('🎨 色素沉澱明顯：強烈建議使用荷顏防曬隔離霜（SPF 50+）配合煥采肌活蛋白霜，阻斷紫外線並淡化色斑。每 2-3 小時補擦防曬，配合 SOD 面膜加強代謝');
+    } else {
+      recommendations.push('🎨 輕微色素沉澱：使用荷顏防曬隔離霜預防惡化，搭配靚膚液升級版提亮膚色，維持肌膚透亮度');
+    }
   }
   
-  if (analysisData.acne?.value >= 1 || analysisData.blackhead?.value >= 1) {
-    recommendations.push('建議使用含有水楊酸的產品控油抗痘,保持臉部清潔但避免過度清潔');
+  // 5. 痘痘與粉刺分析
+  const hasAcne = analysisData.acne?.value >= 1 || analysisData.acne_severity?.value >= 1 || analysisData.blackhead?.value >= 1;
+  if (hasAcne) {
+    recommendations.push('🔴 痘痘肌膚調理：建議使用荷顏溫和清潔配合 SOD 面膜，溫和清潔不刺激。避免擠壓痘痘，保持臉部清潔但勿過度清潔造成肌膚屏障受損');
   }
   
-  recommendations.push('每日使用 SPF 30 以上的防曬產品,預防光老化');
-  recommendations.push('保持規律作息和充足睡眠,有助於肌膚自我修復');
-  recommendations.push('均衡飲食,多攝取富含抗氧化物的蔬果');
+  // 6. 敏感與紅區分析
+  const hasSensitivity = analysisData.sensitivity?.value >= 1 || analysisData.red_area_severity?.value >= 1;
+  if (hasSensitivity) {
+    recommendations.push('🌿 敏感肌膚護理：您的肌膚較為敏感，建議使用荷顏溫和清潔與靚膚液升級版，強化肌膚屏障。避免使用刺激性產品，新產品使用前先做耳後測試');
+  }
+  
+  // 7. 肌膚類型建議
+  const skinType = analysisData.skin_type?.value;
+  if (skinType === 0) {
+    recommendations.push('🌊 油性肌膚：注意控油但避免過度清潔，使用荷顏靚膚液升級版調節水油平衡，選擇清爽型保濕產品');
+  } else if (skinType === 1) {
+    recommendations.push('💧 乾性肌膚：加強保濕鎖水，使用荷顏精華液配合養顏乳，建立完整保濕屏障。避免使用含酒精的產品');
+  } else if (skinType === 2) {
+    recommendations.push('⚖️ 中性肌膚：恭喜您擁有理想膚質！建議使用荷顏靚膚液升級版維持平衡狀態，持續做好基礎保養與防曬');
+  } else if (skinType === 3) {
+    recommendations.push('🔄 混合性肌膚：T 字部位與兩頰需分區保養，使用荷顏靚膚液升級版平衡膚質，油性區域加強控油，乾燥區域加強保濕');
+  }
+  
+  // 8. 基礎保養建議（總是顯示）
+  recommendations.push('☀️ 防曬是最重要的保養：每日使用荷顏防曬隔離霜 SPF 50+，即使陰天或室內也要防護，預防光老化與色素沉澱');
+  
+  // 9. 生活習慣建議
+  if (wrinkleIssues.length > 0 || hasEyeIssues) {
+    recommendations.push('😴 優質睡眠促進修復：建議每晚 11 點前就寢，保持 7-8 小時深度睡眠，讓肌膚充分進行夜間修護');
+  }
+  
+  // 10. 飲食建議
+  if (hasPigmentation || wrinkleIssues.length > 0) {
+    recommendations.push('🥗 抗氧化飲食：多攝取富含維生素 C、E 的蔬果（藍莓、番茄、堅果），減少糖分攝取，補充足夠水分（每日 2000cc）');
+  }
+  
+  // 11. 荷顏產品使用建議
+  recommendations.push('💎 荷顏 28 天煥膚計畫：建議搭配荷顏完整產品線，連續使用 28 天（完整肌膚更新週期），即可看到顯著改善效果');
   
   return recommendations;
 };
@@ -206,8 +264,13 @@ const SkinAnalysis = () => {
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [error, setError] = useState(null);
-  const [showAllDetails, setShowAllDetails] = useState(false);
+  const [showAllDetails, setShowAllDetails] = useState('issues'); // 'issues' | 'all' | 'none'
   const [showRedAreaMap, setShowRedAreaMap] = useState(false);
+  
+  // AI 推薦狀態
+  const [aiRecommendation, setAiRecommendation] = useState(null);
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [showAIRecommendation, setShowAIRecommendation] = useState(false);
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -657,12 +720,25 @@ const SkinAnalysis = () => {
 
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorDetails = null;
+        let suggestions = [];
+        
         try {
           const errorData = await response.json();
-          errorMessage = errorData.error || errorData.message || errorMessage;
+          errorMessage = errorData.error?.message || errorData.message || errorMessage;
+          errorDetails = errorData.error?.detail;
+          suggestions = errorData.error?.suggestions || [];
         } catch (e) {
           // Ignore JSON parse error
         }
+        
+        // 顯示友善的錯誤訊息
+        let displayMessage = errorMessage;
+        if (suggestions.length > 0) {
+          displayMessage += '\n\n' + suggestions.join('\n');
+        }
+        
+        setError(displayMessage);
         throw new Error(errorMessage);
       }
 
@@ -723,16 +799,66 @@ const SkinAnalysis = () => {
           skin_age: skin_age,
           analysis: rawAnalysis,
           recommendations: recommendations,
+          skincareRoutine: data.data?.skincareRoutine || null,
           face_rectangle: data.data?.face_rectangle || data.data?.analysis?.face_rectangle,
-          raw_data: data.data
+          raw_data: {
+            ...data.data,
+            scores: data.data?.summary?.scores || {
+              hydration: 0,
+              radiance: 0,
+              firmness: 0
+            }
+          }
         };
         
         console.log('✅ 處理後的分析結果:', {
           overall_score,
           skin_age,
           analysisKeys: Object.keys(rawAnalysis),
-          recommendationsCount: recommendations?.length
+          recommendationsCount: recommendations?.length,
+          hasSkincareRoutine: !!data.data?.skincareRoutine,
+          scores: data.data?.summary?.scores
         });
+        
+        // 保存分析結果到本地存儲（包含完整數據和保養方案）
+        try {
+          const fengShuiInfo = data.data?.fengShui || {};
+          const savedRecord = {
+            id: data.data?.recordId || `local_${Date.now()}`,
+            created_at: getTaiwanTimestamp(),
+            timestamp: getTaiwanTimestamp(),
+            overall_score: overall_score,
+            skin_age: skin_age,
+            analysis: rawAnalysis,
+            full_analysis_data: rawAnalysis,
+            recommendations: recommendations,
+            skincare_routine: data.data?.skincareRoutine || null,
+            face_rectangle: data.data?.face_rectangle || data.data?.analysis?.face_rectangle,
+            feng_shui: fengShuiInfo,
+            feng_shui_element: fengShuiInfo.element || '未知',
+            feng_shui_blessing: fengShuiInfo.blessing || '',
+            userMode: data.data?.userMode || 'member',
+            source: 'local'
+          };
+          
+          // 獲取現有記錄
+          const existingRecords = JSON.parse(localStorage.getItem('skin_analysis_history') || '[]');
+          
+          // 添加新記錄到開頭（最新的在前面）
+          existingRecords.unshift(savedRecord);
+          
+          // 只保留最近 50 筆記錄
+          if (existingRecords.length > 50) {
+            existingRecords.splice(50);
+          }
+          
+          // 保存回本地存儲
+          localStorage.setItem('skin_analysis_history', JSON.stringify(existingRecords));
+          
+          console.log('✅ 分析結果已保存到本地存儲');
+        } catch (saveError) {
+          console.error('❌ 保存到本地存儲失敗:', saveError);
+        }
         
         setAnalysisResult(processedData);
         
@@ -764,6 +890,50 @@ const SkinAnalysis = () => {
     }
   };
 
+  // 獲取 AI 專家推薦
+  const getAIExpertRecommendation = async (userQuery = '') => {
+    if (!analysisResult) {
+      setError('請先完成肌膚檢測');
+      return;
+    }
+
+    setIsLoadingAI(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/skin-recommendation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          analysisResult: analysisResult,
+          userQuery: userQuery
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || '獲取 AI 推薦失敗');
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setAiRecommendation(data.data);
+        setShowAIRecommendation(true);
+      } else {
+        throw new Error(data.error?.message || 'AI 推薦失敗');
+      }
+
+    } catch (err) {
+      console.error('AI 推薦錯誤:', err);
+      setError(`AI 推薦系統暫時無法使用: ${err.message}`);
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
+
   const downloadReport = () => {
     if (!analysisResult) return;
 
@@ -772,7 +942,7 @@ const SkinAnalysis = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `美魔力肌膚檢測報告_${new Date().toISOString().split('T')[0]}.txt`;
+    link.download = `美魔力肌膚檢測報告_${getTaiwanDateString()}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -780,7 +950,7 @@ const SkinAnalysis = () => {
   };
 
   const generateReportText = (data) => {
-    const date = new Date().toLocaleString('zh-TW');
+    const date = getTaiwanTimestamp().replace('T', ' ').substring(0, 19) + ' (台灣時間)';
     
     let report = `
 ========================================
@@ -1230,6 +1400,47 @@ const SkinAnalysis = () => {
                 </div>
               </div>
 
+              {/* 肌膚指標 */}
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border-2 border-purple-200">
+                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <span className="text-xl">💎</span>
+                  肌膚指標
+                </h4>
+                <div className="space-y-2 text-sm">
+                  {analysisResult.raw_data?.scores && (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-600">💧 水潤度</span>
+                        <span className={`font-bold text-lg ${
+                          analysisResult.raw_data.scores.hydration >= 80 ? 'text-blue-600' :
+                          analysisResult.raw_data.scores.hydration >= 60 ? 'text-cyan-600' : 'text-orange-600'
+                        }`}>
+                          {analysisResult.raw_data.scores.hydration || 0}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-600">✨ 光澤度</span>
+                        <span className={`font-bold text-lg ${
+                          analysisResult.raw_data.scores.radiance >= 80 ? 'text-yellow-600' :
+                          analysisResult.raw_data.scores.radiance >= 60 ? 'text-amber-600' : 'text-orange-600'
+                        }`}>
+                          {analysisResult.raw_data.scores.radiance || 0}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-600">🎯 緊緻度</span>
+                        <span className={`font-bold text-lg ${
+                          analysisResult.raw_data.scores.firmness >= 80 ? 'text-purple-600' :
+                          analysisResult.raw_data.scores.firmness >= 60 ? 'text-pink-600' : 'text-red-600'
+                        }`}>
+                          {analysisResult.raw_data.scores.firmness || 0}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
               {/* 老化指標 */}
               <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 border-2 border-orange-200">
                 <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
@@ -1356,19 +1567,42 @@ const SkinAnalysis = () => {
                   🔍 詳細分析結果
                 </h3>
                 <p className="text-sm text-slate-500">
-                  {showAllDetails ? '顯示所有項目' : '僅顯示需要注意的項目'}
+                  {showAllDetails === 'all' ? '顯示所有項目' : 
+                   showAllDetails === 'issues' ? '僅顯示需要注意的項目' : 
+                   '已隱藏所有項目'}
                 </p>
               </div>
               <button
-                onClick={() => setShowAllDetails(!showAllDetails)}
+                onClick={() => {
+                  if (showAllDetails === 'issues') setShowAllDetails('all');
+                  else if (showAllDetails === 'all') setShowAllDetails('none');
+                  else setShowAllDetails('issues');
+                }}
                 className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-sm font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-md flex items-center gap-2"
               >
                 <BiInfoCircle className="w-4 h-4" />
-                {showAllDetails ? '收起' : '展開全部'}
+                {showAllDetails === 'issues' ? '展開全部' : 
+                 showAllDetails === 'all' ? '隱藏全部' : 
+                 '顯示問題'}
               </button>
             </div>
 
             {(() => {
+              // 如果狀態是 'none'，顯示隱藏提示
+              if (showAllDetails === 'none') {
+                return (
+                  <div className="text-center py-12 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border-2 border-dashed border-purple-200">
+                    <div className="text-6xl mb-4">👁️‍🗨️</div>
+                    <p className="text-lg font-semibold text-slate-700 mb-2">
+                      詳細分析結果已隱藏
+                    </p>
+                    <p className="text-sm text-slate-500 mb-4">
+                      點擊上方按鈕「顯示問題」或「展開全部」查看分析結果
+                    </p>
+                  </div>
+                );
+              }
+
               const categorized = categorizeAnalysis(analysisResult.analysis);
               
               const totalItems = Object.values(categorized).reduce((sum, items) => sum + items.length, 0);
@@ -1402,13 +1636,13 @@ const SkinAnalysis = () => {
                     const hasIssues = items.some(isIssue);
                     const issueCount = items.filter(isIssue).length;
                     
-                    if (!showAllDetails && !hasIssues) return null;
+                    if (showAllDetails === 'issues' && !hasIssues) return null;
                     
                     return (
                       <div key={category} className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border-l-4 border-purple-400">
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="text-lg font-bold text-slate-800">{category}</h4>
-                          {!showAllDetails && issueCount > 0 && (
+                          {showAllDetails === 'issues' && issueCount > 0 && (
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-bold text-orange-600 bg-orange-100 px-3 py-1.5 rounded-full border-2 border-orange-300 shadow-sm">
                                 ⚠️ {issueCount} 項需注意
@@ -1478,7 +1712,7 @@ const SkinAnalysis = () => {
                               : 'N/A';
                             
                             // Filter logic
-                            if (!showAllDetails && isSeverityField && displayValue === 0) return null;
+                            if (showAllDetails === 'issues' && isSeverityField && displayValue === 0) return null;
                             
                             return (
                               <div
@@ -1507,15 +1741,6 @@ const SkinAnalysis = () => {
                                     <span className={`${status.color} font-bold text-sm`}>
                                       {status.text}
                                     </span>
-                                    {item.data.confidence !== undefined && (
-                                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                        item.data.confidence >= 0.9 ? 'bg-green-100 text-green-700' :
-                                        item.data.confidence >= 0.7 ? 'bg-yellow-100 text-yellow-700' :
-                                        'bg-red-100 text-red-700'
-                                      }`}>
-                                        {confidence}
-                                      </span>
-                                    )}
                                   </div>
                                   {/* Progress bar for severity items */}
                                   {isSeverityField && displayValue !== null && (
@@ -1532,19 +1757,6 @@ const SkinAnalysis = () => {
                                     </div>
                                   )}
                                 </div>
-                                {showAllDetails && item.data.confidence !== undefined && (
-                                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200">
-                                    <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                                      <div 
-                                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
-                                        style={{ width: `${(item.data.confidence * 100)}%` }}
-                                      ></div>
-                                    </div>
-                                    <span className="text-xs text-slate-600 font-semibold">
-                                      {(item.data.confidence * 100).toFixed(0)}%
-                                    </span>
-                                  </div>
-                                )}
                               </div>
                             );
                           })}
@@ -1553,7 +1765,7 @@ const SkinAnalysis = () => {
                     );
                   })}
                   
-                  {!showAllDetails && 
+                  {showAllDetails === 'issues' && 
                    Object.values(categorized).every(items => 
                      items.every(item => item.data?.value === 0)
                    ) && (
@@ -1566,7 +1778,7 @@ const SkinAnalysis = () => {
                         所有檢測項目都處於優秀狀態
                       </p>
                       <button
-                        onClick={() => setShowAllDetails(true)}
+                        onClick={() => setShowAllDetails('all')}
                         className="mt-4 text-purple-600 hover:text-purple-700 text-sm"
                       >
                         點擊查看詳細數據
@@ -1578,8 +1790,149 @@ const SkinAnalysis = () => {
             })()}
           </div>
 
-          {/* 專業個人化保養建議與荷顏產品推薦 */}
-          {(() => {
+          {/* 保養建議 */}
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6 shadow-lg border border-yellow-200">
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-800">
+              <BiTrendingUp className="w-6 h-6 text-orange-500" />
+              💡 保養建議
+            </h3>
+            <div className="space-y-3">
+              {analysisResult.recommendations.map((rec, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-3 bg-white rounded-lg p-4"
+                >
+                  <BiCheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-slate-700">{rec}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+
+          {/* 個人專屬保養方案 */}
+          {analysisResult.skincareRoutine && (
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-purple-100">
+              <h3 className="text-2xl font-bold mb-2 flex items-center gap-3 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                <span className="text-3xl">✨</span>
+                個人化專屬保養方案
+              </h3>
+              <p className="text-slate-600 mb-6">
+                根據您的肌膚檢測報告量身打造，配合規律使用 28 天可見顯著改善
+              </p>
+
+              <div className="space-y-6">
+                {/* 早晨保養程序 */}
+                {analysisResult.skincareRoutine.morning?.length > 0 && (
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-5 border border-orange-200">
+                    <h4 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      🌅 早晨保養程序
+                    </h4>
+                    <div className="space-y-3">
+                      {analysisResult.skincareRoutine.morning.map((item, index) => (
+                        <div key={index} className="flex gap-3 bg-white/60 rounded-lg p-3">
+                          <div className="flex-shrink-0 w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                            {item.step}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-800">{item.name}</p>
+                            <p className="text-sm text-gray-600 mt-1">{item.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 晚間保養程序 */}
+                {analysisResult.skincareRoutine.evening?.length > 0 && (
+                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-5 border border-indigo-200">
+                    <h4 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      🌙 晚間保養程序
+                    </h4>
+                    <div className="space-y-3">
+                      {analysisResult.skincareRoutine.evening.map((item, index) => (
+                        <div key={index} className="flex gap-3 bg-white/60 rounded-lg p-3">
+                          <div className="flex-shrink-0 w-8 h-8 bg-indigo-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                            {item.step}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-800">{item.name}</p>
+                            <p className="text-sm text-gray-600 mt-1">{item.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 每週特殊保養 */}
+                {analysisResult.skincareRoutine.weekly?.length > 0 && (
+                  <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-xl p-5 border border-pink-200">
+                    <h4 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      📅 每週特殊保養
+                    </h4>
+                    <div className="space-y-3">
+                      {analysisResult.skincareRoutine.weekly.map((item, index) => (
+                        <div key={index} className="bg-white/60 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="px-3 py-1 bg-pink-500 text-white text-xs rounded-full font-semibold">
+                              {item.freq}
+                            </span>
+                            <p className="font-semibold text-gray-800">{item.name}</p>
+                          </div>
+                          <p className="text-sm text-gray-600">{item.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 推薦產品組合 */}
+                {analysisResult.skincareRoutine.products?.length > 0 && (
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-5 border border-purple-200">
+                    <h4 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      🛍️ 推薦產品組合
+                    </h4>
+                    <div className="space-y-2">
+                      {analysisResult.skincareRoutine.products.map((product, index) => (
+                        <div key={index} className="bg-white/60 rounded-lg p-3 text-gray-700">
+                          {product}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 生活習慣建議 */}
+                {analysisResult.skincareRoutine.lifestyle?.length > 0 && (
+                  <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-xl p-5 border border-green-200">
+                    <h4 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      🌿 生活習慣建議
+                    </h4>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      {analysisResult.skincareRoutine.lifestyle.map((tip, index) => (
+                        <div key={index} className="bg-white/60 rounded-lg p-3 text-sm text-gray-700">
+                          {tip}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 溫馨提示 */}
+                <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    <span className="font-semibold text-blue-700">💡 溫馨提示：</span>
+                    本保養方案根據您的肌膚檢測結果量身定制。建議持續使用 28 天（一個肌膚更新週期）後再次檢測，追蹤改善成效。如有任何不適，請立即停用並諮詢專業人士。
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 舊的產品推薦區塊（如果沒有 skincareRoutine 才顯示）*/}
+          {!analysisResult.skincareRoutine && (() => {
             // Generate product recommendations based on skin analysis
             const generateProductRecommendations = () => {
               const recommendations = [];
@@ -1613,23 +1966,38 @@ const SkinAnalysis = () => {
               if (hasWrinkles || hasDarkSpots) {
                 recommendations.push({
                   type: 'aging_dullness',
-                  title: '🌟 老化與黯沉改善方案',
-                  description: '您的肌膚顯示出老化或黯沉的跡象，建議使用以下荷顏產品組合來改善：',
+                  title: '🌟 抗老煥采專屬方案',
+                  description: '您的肌膚顯示出老化或黯沉的跡象，建議使用荷顏抗老系列產品組合，28 天看見年輕改變：',
+                  priority: 'high',
+                  duration: '連續使用 28 天為一週期，建議持續 3 個月達到最佳效果',
                   products: [
                     {
                       name: '煥采肌活蛋白霜',
-                      benefit: '深層滋養，提升肌膚彈性，減少細紋',
-                      usage: '早晚清潔後，取適量均勻塗抹於臉部'
+                      benefit: '含高濃度膠原蛋白與彈力蛋白，深層滋養提升肌膚彈性，減少細紋與皺紋深度',
+                      usage: '早晚潔膚後，取珍珠大小份量，由內而外、由下而上輕柔按摩至吸收',
+                      time: '早上 + 晚上',
+                      tips: '重點加強於法令紋、額頭紋等皺紋部位，配合向上提拉手法'
                     },
                     {
                       name: '靚膚液升級版',
-                      benefit: '促進肌膚新陳代謝，改善黯沉，提亮膚色',
-                      usage: '清潔後第一步使用，輕拍至吸收'
+                      benefit: '促進肌膚新陳代謝，加速老廢角質代謝，改善黯沉無光澤，提亮膚色恢復透亮感',
+                      usage: '清潔後第一步驟，取適量於手心，輕拍全臉至完全吸收',
+                      time: '早上 + 晚上（清潔後立即使用）',
+                      tips: '使用後等待 30 秒再進行下一步保養，提升後續產品吸收力'
                     },
                     {
                       name: '精華液',
-                      benefit: '高濃度活性成分，深入修護老化肌膚',
-                      usage: '化妝水後使用，重點加強於皺紋部位'
+                      benefit: '高濃度活性抗老成分，深入真皮層修護老化受損肌膚，增強肌膚自我修復能力',
+                      usage: '靚膚液後使用，取 2-3 滴於指尖，點塗於全臉後輕柔按摩',
+                      time: '晚上重點使用（可早晚使用）',
+                      tips: '重點加強於皺紋、細紋部位，可局部疊擦增強效果'
+                    },
+                    {
+                      name: 'SOD 面膜',
+                      benefit: '超氧化物歧化酶強效抗氧化，中和自由基，延緩肌膚老化，提升肌膚防禦力',
+                      usage: '清潔後敷於全臉 15-20 分鐘，取下後輕拍幫助吸收，無需清洗',
+                      time: '每週 2-3 次（晚上使用）',
+                      tips: '敷面膜前可先使用靚膚液打底，提升吸收效果'
                     }
                   ]
                 });
@@ -1639,23 +2007,38 @@ const SkinAnalysis = () => {
               if (hasDarkSpots && !hasWrinkles) {
                 recommendations.push({
                   type: 'dullness_spots',
-                  title: '✨ 提亮淡斑專屬方案',
-                  description: '針對黯沉與色素沉澱，為您規劃專業美白方案：',
+                  title: '✨ 淨白透亮專屬方案',
+                  description: '針對黯沉與色素沉澱問題，為您規劃專業淨白提亮方案，重現肌膚自然光采：',
+                  priority: 'high',
+                  duration: '建議持續使用 8-12 週，配合防曬達到最佳淡斑效果',
                   products: [
                     {
-                      name: '防曬隔離霜',
-                      benefit: '阻擋紫外線，預防色素沉澱加重',
-                      usage: '白天出門前使用，每2-3小時補擦'
+                      name: '防曬隔離霜 SPF 50+ PA++++',
+                      benefit: '高效阻擋 UVA/UVB，預防色素沉澱加重，同時形成保護膜隔離環境傷害',
+                      usage: '白天保養最後一步驟，取適量均勻塗抹全臉及頸部',
+                      time: '每天早上（出門前 15 分鐘）',
+                      tips: '室外活動每 2-3 小時補擦，流汗後立即補充。陰天也要使用！'
                     },
                     {
                       name: '煥采肌活蛋白霜',
-                      benefit: '淡化色斑，均勻膚色，恢復透亮光澤',
-                      usage: '早晚清潔後使用'
+                      benefit: '含美白精萃成分，淡化色斑與膚色不均，均勻膚色，恢復肌膚透亮光澤',
+                      usage: '早晚清潔後，取適量輕柔按摩全臉至吸收',
+                      time: '早上 + 晚上',
+                      tips: '重點加強於色斑、暗沉部位，可局部疊擦'
                     },
                     {
-                      name: 'SOD面膜',
-                      benefit: '強效抗氧化，加速黑色素代謝',
-                      usage: '每週2-3次，敷15-20分鐘'
+                      name: '靚膚液升級版',
+                      benefit: '促進黑色素代謝，提亮膚色，改善整體黯沉，恢復肌膚自然透亮度',
+                      usage: '清潔後立即使用，輕拍全臉至吸收',
+                      time: '早上 + 晚上（第一步驟）',
+                      tips: '配合由內而外輕拍手法，促進循環與吸收'
+                    },
+                    {
+                      name: 'SOD 面膜',
+                      benefit: '強效抗氧化配方，中和自由基，加速黑色素代謝，提升肌膚亮度',
+                      usage: '清潔後敷於全臉 15-20 分鐘，取下後輕拍吸收',
+                      time: '每週 2-3 次（建議晚上使用）',
+                      tips: '密集淡斑期可增加至每天使用，持續 2 週後改為每週 2-3 次'
                     }
                   ]
                 });
@@ -1665,23 +2048,38 @@ const SkinAnalysis = () => {
               if (hasDryness) {
                 recommendations.push({
                   type: 'dryness_barrier',
-                  title: '💧 保濕修護強化方案',
-                  description: '您的肌膚偏乾燥，需要加強保濕與屏障修護：',
+                  title: '💧 深層保濕修護方案',
+                  description: '您的肌膚偏乾燥，需要加強保濕與肌膚屏障修護，建立完整保水防護網：',
+                  priority: 'high',
+                  duration: '建議持續使用 4-6 週修護屏障，之後維持保養',
                   products: [
                     {
                       name: '精華液',
-                      benefit: '深層補水，修護肌膚屏障',
-                      usage: '化妝水後使用，可局部加強乾燥部位'
+                      benefit: '小分子玻尿酸深層補水，直達肌膚底層，修護受損屏障，增強肌膚保水能力',
+                      usage: '靚膚液後取 2-3 滴，均勻塗抹全臉，乾燥部位可重複疊擦',
+                      time: '早上 + 晚上',
+                      tips: '特別乾燥時可增加用量，搭配輕拍手法促進吸收'
                     },
                     {
                       name: '靚膚液升級版',
-                      benefit: '提升肌膚吸收力，鎖住水分',
-                      usage: '清潔後第一步使用'
+                      benefit: '打開肌膚吸收通道，提升後續保養品吸收效率，幫助鎖住水分不流失',
+                      usage: '清潔後立即使用，倒於化妝棉或手心，輕拍全臉至吸收',
+                      time: '早上 + 晚上（清潔後第一步）',
+                      tips: '乾燥肌建議使用手心溫敷法，避免化妝棉摩擦刺激'
                     },
                     {
                       name: '養顏乳',
-                      benefit: '長效保濕，形成保護膜，防止水分流失',
-                      usage: '精華液後使用，鎖住所有養分'
+                      benefit: '含神經醯胺與植物油脂，長效鎖水保濕，形成天然保護膜，防止水分流失',
+                      usage: '精華液後取適量，由內而外輕柔推勻全臉',
+                      time: '早上 + 晚上（保養最後一步）',
+                      tips: '冬季或特別乾燥時可增加用量，或局部加強兩頰等乾燥區域'
+                    },
+                    {
+                      name: '煥采肌活蛋白霜',
+                      benefit: '滋潤質地深層滋養，修護乾燥受損肌膚，提升肌膚柔軟度與彈性',
+                      usage: '晚間保養可替代養顏乳，或疊加使用加強滋養',
+                      time: '晚上（可與養顏乳擇一或疊加）',
+                      tips: '極乾燥肌膚可與養顏乳混合使用，增強保濕滋潤效果'
                     }
                   ]
                 });
@@ -1691,23 +2089,38 @@ const SkinAnalysis = () => {
               if (hasSensitivity || hasAcne) {
                 recommendations.push({
                   type: 'sensitivity',
-                  title: '🌿 舒緩鎮定溫和方案',
-                  description: '您的肌膚較為敏感，建議使用溫和舒緩的產品組合：',
+                  title: '🌿 舒緩修護溫和方案',
+                  description: '您的肌膚較為敏感或有痘痘困擾，建議使用溫和舒緩的產品組合，重建肌膚健康防禦：',
+                  priority: 'critical',
+                  duration: '急性期每日使用，穩定後改為每週 2-3 次維持',
                   products: [
                     {
                       name: '溫和清潔',
-                      benefit: '不刺激，溫和清潔，維持肌膚pH值',
-                      usage: '早晚清潔，避免過度搓揉'
+                      benefit: '弱酸性溫和配方，不含皂鹼與刺激成分，溫和清潔同時維持肌膚天然 pH 值與屏障',
+                      usage: '取適量加水搓揉起泡，輕柔按摩全臉 30 秒，溫水洗淨',
+                      time: '早上 + 晚上',
+                      tips: '避免過度搓揉或使用過熱的水，不要清潔超過 1 分鐘。一天最多清潔 2 次'
                     },
                     {
-                      name: 'SOD面膜',
-                      benefit: '舒緩鎮定，減少紅腫與不適感',
-                      usage: '敏感時期可增加使用頻率至每日一次'
+                      name: 'SOD 面膜',
+                      benefit: 'SOD 酵素舒緩鎮定，快速減少泛紅、紅腫與刺癢不適感，修護敏感受損肌膚',
+                      usage: '清潔後敷於全臉或局部泛紅區域 15-20 分鐘，取下後輕拍吸收',
+                      time: '敏感急性期：每天使用 / 穩定期：每週 2-3 次',
+                      tips: '可冰敷於冰箱冷藏後使用，加強鎮定舒緩效果。不適時可局部敷用'
                     },
                     {
                       name: '靚膚液升級版',
-                      benefit: '強化肌膚防禦力，降低敏感反應',
-                      usage: '清潔後立即使用，幫助肌膚穩定'
+                      benefit: '強化肌膚天然防禦屏障，降低外界刺激的敏感反應，提升肌膚耐受性',
+                      usage: '清潔後立即使用，倒於手心輕拍全臉，幫助肌膚快速穩定',
+                      time: '早上 + 晚上（清潔後第一步）',
+                      tips: '敏感期間避免使用化妝棉，用手心溫敷按壓更溫和。若刺痛請暫停使用'
+                    },
+                    {
+                      name: '精華液',
+                      benefit: '溫和修護配方，修護敏感受損肌膚，增強屏障功能，減少敏感發作頻率',
+                      usage: '靚膚液後使用，取 1-2 滴輕柔按壓全臉',
+                      time: '晚上（白天若不適也可使用）',
+                      tips: '敏感急性期減少用量，待肌膚穩定後再增加。新產品使用前請先做耳後測試'
                     }
                   ]
                 });
@@ -1717,23 +2130,38 @@ const SkinAnalysis = () => {
               if (recommendations.length === 0) {
                 recommendations.push({
                   type: 'maintenance',
-                  title: '✅ 日常保養維持方案',
-                  description: '您的肌膚狀態良好！建議持續以下日常保養：',
+                  title: '✅ 理想肌膚維持方案',
+                  description: '恭喜！您的肌膚狀態很好，建議持續以下日常保養，維持最佳狀態並預防老化：',
+                  priority: 'maintenance',
+                  duration: '持續使用維持健康膚質，預防勝於治療',
                   products: [
                     {
                       name: '靚膚液升級版',
-                      benefit: '維持肌膚健康，預防老化',
-                      usage: '每日早晚使用'
+                      benefit: '維持肌膚健康平衡，提升細胞新陳代謝，預防提前老化，維持肌膚年輕狀態',
+                      usage: '每日清潔後第一步驟，倒於手心或化妝棉輕拍至吸收',
+                      time: '早上 + 晚上（必用）',
+                      tips: '可以想像成肌膚的「打底液」，讓後續保養更有效'
                     },
                     {
-                      name: '防曬隔離霜',
-                      benefit: '預防光老化，保持肌膚年輕',
-                      usage: '白天外出必備'
+                      name: '防曬隔離霜 SPF 50+ PA++++',
+                      benefit: '防曬是最有效的抗老手段，預防光老化、色素沉澱，保持肌膚年輕狀態',
+                      usage: '白天保養最後一步，出門前 15 分鐘均勻塗抹',
+                      time: '每天早上（陰天也要用！）',
+                      tips: '室內也有紫外線！即使不出門也建議使用。長時間室外活動每 2-3 小時補擦'
                     },
                     {
-                      name: 'SOD面膜',
-                      benefit: '定期深層保養，維持最佳狀態',
-                      usage: '每週1-2次'
+                      name: 'SOD 面膜',
+                      benefit: '定期深層保養，抗氧化修護，維持肌膚最佳狀態，預防環境傷害',
+                      usage: '清潔後敷於全臉 15-20 分鐘，取下後輕拍吸收',
+                      time: '每週 1-2 次（建議晚上）',
+                      tips: '可選擇固定每週特定日子（如週三、週六）作為肌膚特殊護理日'
+                    },
+                    {
+                      name: '精華液',
+                      benefit: '預防性抗老保養，延緩皺紋出現，維持肌膚細臻年輕健康',
+                      usage: '靚膚液後取 1-2 滴均勻塗抹，可重點加強眼周、額頭',
+                      time: '晚上使用（或早晚）',
+                      tips: '25 歲以上建議加入抗老精華液，預防老化從現在開始'
                     }
                   ]
                 });
@@ -1749,86 +2177,171 @@ const SkinAnalysis = () => {
                 <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 rounded-2xl p-6 shadow-xl border-2 border-purple-200">
                   <h3 className="text-2xl font-bold mb-2 flex items-center gap-3 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                     <span className="text-3xl">💎</span>
-                    專業個人化保養建議與荷顏產品推薦
+                    個人化專屬保養方案:
                   </h3>
-                  <p className="text-slate-600 mb-6">
+                  <p className="text-slate-600 mb-2">
                     根據您的肌膚檢測報告，我們為您量身打造專屬保養方案
+                  </p>
+                  <p className="text-sm text-purple-600 font-semibold mb-6 flex items-center gap-2">
+                    <BiCheckCircle className="w-4 h-4" />
+                    共推薦 {productRecommendations.length} 個專屬方案，請仔細閱讀
                   </p>
                   
                   <div className="space-y-6">
-                    {productRecommendations.map((recommendation, recIndex) => (
-                      <div key={recIndex} className="bg-white rounded-xl p-6 shadow-lg border border-purple-100">
-                        <h4 className="text-xl font-bold mb-3 text-purple-700">
-                          {recommendation.title}
-                        </h4>
-                        <p className="text-slate-600 mb-4 text-sm">
-                          {recommendation.description}
-                        </p>
-                        
-                        <div className="space-y-4">
-                          {recommendation.products.map((product, prodIndex) => (
-                            <div key={prodIndex} className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
-                              <div className="flex items-start gap-3">
-                                <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
-                                  {prodIndex + 1}
-                                </div>
-                                <div className="flex-1">
-                                  <h5 className="font-bold text-lg text-purple-700 mb-1">
-                                    荷顏 {product.name}
-                                  </h5>
-                                  <p className="text-slate-700 text-sm mb-2">
-                                    <span className="font-semibold text-purple-600">功效：</span>
-                                    {product.benefit}
-                                  </p>
-                                  <p className="text-slate-600 text-sm">
-                                    <span className="font-semibold text-pink-600">使用方式：</span>
-                                    {product.usage}
-                                  </p>
+                    {productRecommendations.map((recommendation, recIndex) => {
+                      // 優先級樣式
+                      const priorityConfig = {
+                        critical: { bg: 'bg-red-100', border: 'border-red-300', text: 'text-red-700', label: '緊急處理' },
+                        high: { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-700', label: '優先處理' },
+                        maintenance: { bg: 'bg-green-100', border: 'border-green-300', text: 'text-green-700', label: '維持保養' }
+                      };
+                      const priority = priorityConfig[recommendation.priority] || priorityConfig.high;
+                      
+                      return (
+                        <div key={recIndex} className="bg-white rounded-xl p-6 shadow-lg border-2 border-purple-100 hover:border-purple-300 transition-all">
+                          {/* 方案標題與優先級 */}
+                          <div className="flex items-start justify-between mb-3">
+                            <h4 className="text-xl font-bold text-purple-700 flex-1">
+                              {recommendation.title}
+                            </h4>
+                            {recommendation.priority && (
+                              <span className={`${priority.bg} ${priority.border} ${priority.text} px-3 py-1 rounded-full text-xs font-bold border-2 flex-shrink-0 ml-2`}>
+                                {priority.label}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* 方案說明 */}
+                          <p className="text-slate-600 mb-3 text-sm leading-relaxed">
+                            {recommendation.description}
+                          </p>
+                          
+                          {/* 使用周期 */}
+                          {recommendation.duration && (
+                            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-3 mb-4 border border-blue-200">
+                              <p className="text-sm text-blue-700 flex items-center gap-2">
+                                <span className="text-base">⏰</span>
+                                <span className="font-semibold">建議療程：</span>
+                                {recommendation.duration}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {/* 產品清單 */}
+                          <div className="space-y-4">
+                            {recommendation.products.map((product, prodIndex) => (
+                              <div key={prodIndex} className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100 hover:shadow-md transition-all">
+                                <div className="flex items-start gap-3">
+                                  {/* 編號 */}
+                                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold shadow-md">
+                                    {prodIndex + 1}
+                                  </div>
+                                  
+                                  <div className="flex-1">
+                                    {/* 產品名稱 */}
+                                    <h5 className="font-bold text-lg text-purple-700 mb-2">
+                                      🌺 荷顏 {product.name}
+                                    </h5>
+                                    
+                                    {/* 功效 */}
+                                    <div className="mb-2">
+                                      <p className="text-slate-700 text-sm">
+                                        <span className="inline-flex items-center gap-1 font-semibold text-purple-600">
+                                          ✨ 功效：
+                                        </span>
+                                        {product.benefit}
+                                      </p>
+                                    </div>
+                                    
+                                    {/* 使用方式 */}
+                                    <div className="mb-2">
+                                      <p className="text-slate-600 text-sm">
+                                        <span className="inline-flex items-center gap-1 font-semibold text-pink-600">
+                                          👆 使用方式：
+                                        </span>
+                                        {product.usage}
+                                      </p>
+                                    </div>
+                                    
+                                    {/* 使用時間 */}
+                                    {product.time && (
+                                      <div className="mb-2">
+                                        <p className="text-slate-600 text-sm">
+                                          <span className="inline-flex items-center gap-1 font-semibold text-indigo-600">
+                                            🕒 使用時間：
+                                          </span>
+                                          {product.time}
+                                        </p>
+                                      </div>
+                                    )}
+                                    
+                                    {/* 小提示 */}
+                                    {product.tips && (
+                                      <div className="mt-3 pt-3 border-t border-purple-200">
+                                        <p className="text-xs text-slate-500 flex items-start gap-2">
+                                          <span className="text-sm flex-shrink-0">💡</span>
+                                          <span>
+                                            <span className="font-semibold text-orange-600">小提示：</span>
+                                            {product.tips}
+                                          </span>
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                          
+                          {/* 方案底部提醒 */}
+                          <div className="mt-4 pt-4 border-t border-purple-200">
+                            <p className="text-xs text-slate-500 flex items-center gap-2">
+                              <BiCheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              建議按順序使用以上產品，連續使用 28 天（完整肌膚更新週期），即可看到明顯改善效果
+                            </p>
+                          </div>
                         </div>
-                        
-                        <div className="mt-4 pt-4 border-t border-purple-200">
-                          <p className="text-xs text-slate-500 flex items-center gap-2">
-                            <BiCheckCircle className="w-4 h-4 text-green-500" />
-                            建議連續使用28天，即可看到明顯改善效果
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   
-                  <div className="mt-6 bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-4 border-l-4 border-orange-500">
-                    <p className="text-sm text-slate-700">
-                      <span className="font-bold text-orange-700">💡 小提醒：</span>
-                      每個人的肌膚狀況不同，建議先進行小範圍測試。若使用期間有任何不適，請立即停用並諮詢專業人員。
-                    </p>
+                  {/* 整體注意事項 */}
+                  <div className="mt-6 space-y-3">
+                    <div className="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-4 border-l-4 border-orange-500">
+                      <p className="text-sm text-slate-700 flex items-start gap-2">
+                        <span className="text-lg flex-shrink-0">💡</span>
+                        <span>
+                          <span className="font-bold text-orange-700">使用順序提醒：</span>
+                          一般保養步驟為：清潔 → 靚膚液 → 精華液 → 眼霜 → 乳液/面霜 → 防曬（白天）。面膜在清潔後使用。
+                        </span>
+                      </p>
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-red-100 to-pink-100 rounded-lg p-4 border-l-4 border-red-500">
+                      <p className="text-sm text-slate-700 flex items-start gap-2">
+                        <span className="text-lg flex-shrink-0">⚠️</span>
+                        <span>
+                          <span className="font-bold text-red-700">安全提醒：</span>
+                          每個人的肌膚狀況不同，新產品建議先進行耳後或手腕內側小範圍測試 24 小時。若使用期間有任何不適、發紅、刺痛等情況，請立即停用並請教專業皮膚科醫師。
+                        </span>
+                      </p>
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-4 border-l-4 border-purple-500">
+                      <p className="text-sm text-slate-700 flex items-start gap-2">
+                        <span className="text-lg flex-shrink-0">🎯</span>
+                        <span>
+                          <span className="font-bold text-purple-700">持之以恆：</span>
+                          肌膚保養是長期投資，不是立竿見影。建議至少持續使用 28 天（一個肌膚代謝週期）才能看到顯著效果。配合規律作息、均衡飲食、充足睡眠，效果更佳！
+                        </span>
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             );
           })()}
 
-          {/* 建議事項 */}
-          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6 shadow-lg border border-yellow-200">
-            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-800">
-              <BiTrendingUp className="w-6 h-6 text-orange-500" />
-              💡 個人化保養建議
-            </h3>
-            <div className="space-y-3">
-              {analysisResult.recommendations.map((rec, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-3 bg-white rounded-lg p-4"
-                >
-                  <BiCheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-slate-700">{rec}</p>
-                </div>
-              ))}
-            </div>
-          </div>
 
           {/* 動作按鈕 */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -1836,10 +2349,32 @@ const SkinAnalysis = () => {
               onClick={() => {
                 setAnalysisResult(null);
                 setError(null);
+                setAiRecommendation(null);
+                setShowAIRecommendation(false);
               }}
               className="px-8 py-3 bg-white border-2 border-purple-500 text-purple-600 rounded-full font-semibold hover:bg-purple-50 transition-colors"
             >
               重新檢測
+            </button>
+            <button
+              onClick={() => getAIExpertRecommendation('')}
+              disabled={isLoadingAI}
+              className="px-8 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full font-semibold hover:from-indigo-600 hover:to-purple-600 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoadingAI ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  AI 分析中...
+                </>
+              ) : (
+                <>
+                  <span className="text-xl">🤖</span>
+                  獲取 AI 專家推薦
+                </>
+              )}
             </button>
             <button
               onClick={downloadReport}
@@ -1848,6 +2383,94 @@ const SkinAnalysis = () => {
               <BiDownload className="w-5 h-5" />
               儲存報告
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* AI 專家推薦模態框 */}
+      {showAIRecommendation && aiRecommendation && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowAIRecommendation(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-t-2xl z-10">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <span className="text-3xl">🤖</span>
+                  AI 專家分析與推薦
+                </h3>
+                <button
+                  onClick={() => setShowAIRecommendation(false)}
+                  className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-indigo-100 mt-2 text-sm">
+                由 Claude AI 提供的專業肌膚分析建議
+              </p>
+            </div>
+            
+            <div className="p-6">
+              {/* AI 推薦內容 */}
+              <div className="prose prose-slate max-w-none">
+                <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 mb-6 border border-indigo-200">
+                  <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">
+                    {aiRecommendation.recommendation}
+                  </div>
+                </div>
+              </div>
+              
+              {/* 底部資訊 */}
+              <div className="mt-6 pt-4 border-t border-gray-200 flex items-center justify-between text-sm text-slate-500">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-semibold">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                    </svg>
+                    {aiRecommendation.model}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-400">生成時間</p>
+                  <p className="font-medium">{new Date(aiRecommendation.timestamp).toLocaleString('zh-TW')}</p>
+                </div>
+              </div>
+              
+              {/* 操作按鈕 */}
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => {
+                    const text = aiRecommendation.recommendation;
+                    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `AI專家推薦_${new Date().toISOString().split('T')[0]}.txt`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg font-semibold hover:from-indigo-600 hover:to-purple-600 transition-all shadow-md flex items-center justify-center gap-2"
+                >
+                  <BiDownload className="w-5 h-5" />
+                  下載推薦內容
+                </button>
+                <button
+                  onClick={() => setShowAIRecommendation(false)}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                >
+                  關閉
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

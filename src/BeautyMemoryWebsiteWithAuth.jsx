@@ -2,9 +2,11 @@
 // 美魔力 - 整合會員系統的完整範例
 
 import React, { useState, useEffect } from 'react';
-import { BiUser, BiLogOut, BiCamera, BiHistory, BiTrophy } from 'react-icons/bi';
+import { BiLogOut, BiCamera, BiHistory, BiTrophy } from 'react-icons/bi';
 import MemberAuth from './components/MemberAuth';
 import SkinAnalysis from './components/SkinAnalysis';
+import AnalysisDetailModal from './components/AnalysisDetailModal';
+import { formatTaiwanTime, formatTaiwanDate } from './utils/timezone';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000';
 
@@ -15,6 +17,7 @@ function BeautyMemoryWebsiteWithAuth() {
   const [showSkinAnalysis, setShowSkinAnalysis] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [historyRecords, setHistoryRecords] = useState([]);
+  const [selectedRecord, setSelectedRecord] = useState(null);
   const [quota, setQuota] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -77,7 +80,7 @@ function BeautyMemoryWebsiteWithAuth() {
         setQuota(data.data);
       }
     } catch (error) {
-      console.error('取得配額失敗:', error);
+      // 取得配額失敗
     }
   };
 
@@ -141,75 +144,7 @@ function BeautyMemoryWebsiteWithAuth() {
     }
   };
 
-  // 執行分析
-  const performAnalysis = async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
-
-      const response = await fetch(`${API_BASE_URL}/api/analysis/analyze`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: formData
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // 分析成功
-        const { analysis, fengShui, quota: updatedQuota } = data.data;
-        
-        // 更新配額
-        if (updatedQuota) {
-          setQuota(prev => ({
-            ...prev,
-            remaining: updatedQuota.unlimited ? -1 : updatedQuota.remaining
-          }));
-        }
-
-        // 顯示結果
-        showAnalysisResult(analysis, fengShui);
-      } else {
-        alert(`❌ 分析失敗: ${data.error.message}`);
-      }
-
-    } catch (error) {
-      console.error('分析錯誤:', error);
-      alert('❌ 分析過程發生錯誤');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 顯示分析結果
-  const showAnalysisResult = (analysis, fengShui) => {
-    const resultMessage = `
-🎉 AI 肌膚分析完成!
-
-📊 整體評分: ${analysis.overallScore}/100
-
-🔍 各項指標:
-• 水潤度: ${analysis.scores.hydration}
-• 光澤度: ${analysis.scores.radiance}
-• 緊緻度: ${analysis.scores.firmness}
-• 膚質: ${analysis.scores.texture}
-
-⚠️ 主要關注:
-${analysis.keyConcerns.map(c => `• ${c}`).join('\n')}
-
-💡 護膚建議:
-${analysis.recommendations.slice(0, 3).map((r, i) => `${i + 1}. ${r}`).join('\n')}
-
-🔮 風水時辰:
-${fengShui.blessing}
-    `.trim();
-
-    alert(resultMessage);
-  };
-
-  // 查看歷史記錄
+  // 查看歷史記錄（優化版，合併本地和雲端數據）
   const viewHistory = async () => {
     if (!user) {
       alert('請先登入');
@@ -220,30 +155,50 @@ ${fengShui.blessing}
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/analysis/history?limit=10`, {
+      // 1. 獲取雲端記錄
+      const response = await fetch(`${API_BASE_URL}/api/analysis/history?limit=20`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
       });
 
       const data = await response.json();
-
+      let records = [];
+      
       if (data.success) {
-        const records = data.data.records;
+        records = data.data.records || [];
         
-        if (records.length === 0) {
-          alert('📭 您還沒有分析記錄\n\n立即開始第一次肌膚檢測吧!');
-          setIsLoading(false);
-          return;
+        // 調試：輸出第一筆記錄的時間格式
+        if (records.length > 0) {
+          console.log('📅 資料庫時間格式檢查:', {
+            raw: records[0].created_at,
+            type: typeof records[0].created_at,
+            formatted: formatTaiwanTime(records[0].created_at),
+            asDate: new Date(records[0].created_at).toISOString(),
+            taiwanTime: new Date(records[0].created_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
+          });
         }
-
-        setHistoryRecords(records);
-        setShowHistory(true);
+      }
+      
+      // 為記錄提取 skin_age（如果資料庫欄位不存在，從 full_analysis_data 中提取）
+      records.forEach(record => {
+        if (!record.skin_age && record.full_analysis_data?.skin_age?.value) {
+          record.skin_age = record.full_analysis_data.skin_age.value;
+        }
+      });
+      
+      if (records.length === 0) {
+        alert('📭 您還沒有分析記錄\n\n立即開始第一次肌膚檢測吧!');
+        setIsLoading(false);
+        return;
       }
 
+      setHistoryRecords(records);
+      setShowHistory(true);
+
     } catch (error) {
-      alert('❌ 查詢失敗，請稍後再試');
-    } finally {
+      console.error('查詢歷史記錄失敗:', error);
+      alert('❌ 查詢歷史記錄失敗，請稍後再試');
       setIsLoading(false);
     }
   };
@@ -355,9 +310,9 @@ ${fengShui.blessing}
             AI 智能肌膚分析
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            結合 Perfect Corp 專業技術與九紫離火運能量
+            結合 AI專業技術 與 九紫離火運能量
             <br />
-            為您打造專屬的美麗記憶庫
+            為您打造專屬的 美麗記憶庫
           </p>
 
           {/* 功能按鈕 */}
@@ -419,7 +374,7 @@ ${fengShui.blessing}
               AI 智能分析
             </h3>
             <p className="text-gray-600">
-              採用 Perfect Corp 專業技術,95% 醫師級準確率,14 項專業檢測
+              採用 AI 臉部分析專業技術, 27 項專業檢測
             </p>
           </div>
 
@@ -454,60 +409,66 @@ ${fengShui.blessing}
             選擇適合您的方案
           </h3>
           
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* 體驗版 */}
-            <div className="border-2 border-gray-200 rounded-xl p-6">
-              <h4 className="text-lg font-bold text-gray-800 mb-2">體驗版</h4>
-              <p className="text-3xl font-bold text-purple-600 mb-4">免費</p>
-              <ul className="space-y-2 text-sm text-gray-600 mb-6">
-                <li>✓ 3 次 AI 肌膚檢測</li>
-                <li>✓ 基本分析報告</li>
-                <li>✓ 簡單護膚建議</li>
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* 基礎版 */}
+            <div className="border-2 border-gray-200 rounded-xl p-8 hover:shadow-xl transition-shadow">
+              <h4 className="text-2xl font-bold text-gray-800 mb-3">基礎版</h4>
+              <p className="text-4xl font-bold text-purple-600 mb-6">免費</p>
+              <ul className="space-y-3 text-base text-gray-600 mb-8">
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500 font-bold">✓</span>
+                  <span>3 次 AI 肌膚檢測</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500 font-bold">✓</span>
+                  <span>基本分析報告</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500 font-bold">✓</span>
+                  <span>簡單護膚建議</span>
+                </li>
               </ul>
               <button 
                 onClick={() => !user && setShowAuth(true)}
-                className="w-full py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-lg"
               >
                 {user ? '目前方案' : '立即註冊'}
               </button>
             </div>
 
             {/* 專業版 */}
-            <div className="border-2 border-purple-500 rounded-xl p-6 relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-purple-500 text-white text-xs font-bold rounded-full">
-                推薦
+            <div className="border-2 border-purple-500 rounded-xl p-8 relative bg-gradient-to-br from-purple-50 to-pink-50 hover:shadow-2xl transition-shadow">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-bold rounded-full shadow-lg">
+                ⭐ 推薦方案
               </div>
-              <h4 className="text-lg font-bold text-gray-800 mb-2">專業版</h4>
-              <p className="text-3xl font-bold text-purple-600 mb-4">
-                NT$ 99<span className="text-sm text-gray-500">/月</span>
+              <h4 className="text-2xl font-bold text-gray-800 mb-3 mt-2">專業版</h4>
+              <p className="text-4xl font-bold text-purple-600 mb-6">
+                NT$ 99<span className="text-lg text-gray-500 font-normal">/月</span>
               </p>
-              <ul className="space-y-2 text-sm text-gray-600 mb-6">
-                <li>✓ 50 次肌膚檢測/月</li>
-                <li>✓ 完整分析報告</li>
-                <li>✓ 趨勢追蹤</li>
-                <li>✓ 風水時辰建議</li>
-                <li>✓ 美麗記憶庫</li>
+              <ul className="space-y-3 text-base text-gray-700 mb-8">
+                <li className="flex items-center gap-2">
+                  <span className="text-purple-500 font-bold">✓</span>
+                  <span className="font-medium">15 次肌膚檢測/月</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-purple-500 font-bold">✓</span>
+                  <span className="font-medium">完整分析報告</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-purple-500 font-bold">✓</span>
+                  <span className="font-medium">肌膚趨勢追蹤</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-purple-500 font-bold">✓</span>
+                  <span className="font-medium">九紫離火運建議</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-purple-500 font-bold">✓</span>
+                  <span className="font-medium">美麗記憶庫</span>
+                </li>
               </ul>
-              <button className="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all">
+              <button className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-md text-lg">
                 立即升級
-              </button>
-            </div>
-
-            {/* 企業版 */}
-            <div className="border-2 border-gray-200 rounded-xl p-6">
-              <h4 className="text-lg font-bold text-gray-800 mb-2">企業版</h4>
-              <p className="text-3xl font-bold text-purple-600 mb-4">
-                NT$ 999<span className="text-sm text-gray-500">/月</span>
-              </p>
-              <ul className="space-y-2 text-sm text-gray-600 mb-6">
-                <li>✓ 無限次分析</li>
-                <li>✓ 所有功能</li>
-                <li>✓ API 接入</li>
-                <li>✓ 定制化服務</li>
-                <li>✓ 優先客服</li>
-              </ul>
-              <button className="w-full py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
-                聯繫我們
               </button>
             </div>
           </div>
@@ -551,7 +512,7 @@ ${fengShui.blessing}
                 {historyRecords.map((record, index) => (
                   <div
                     key={record.id}
-                    className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-5 border border-purple-200 hover:shadow-md transition-shadow"
+                    className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-5 border border-purple-200 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -559,39 +520,69 @@ ${fengShui.blessing}
                           <span className="bg-purple-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                             {index + 1}
                           </span>
-                          <div>
-                            <p className="text-lg font-semibold text-gray-800">
-                              {new Date(record.created_at).toLocaleString('zh-TW', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </p>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-lg font-semibold text-gray-800">
+                                {formatTaiwanTime(record.created_at)}
+                              </p>
+                              {record.source === 'local' && (
+                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                  本地記錄
+                                </span>
+                              )}
+                            </div>
                             <p className="text-sm text-gray-500">
                               {record.feng_shui_element} 元素 · {record.feng_shui_blessing}
                             </p>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                          <div className="bg-white rounded-lg p-3 text-center">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+                          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
                             <p className="text-2xl font-bold text-purple-600">{record.overall_score}</p>
                             <p className="text-xs text-gray-600">整體評分</p>
                           </div>
-                          <div className="bg-white rounded-lg p-3 text-center">
+                          {record.skin_age && (
+                            <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+                              <p className="text-2xl font-bold text-indigo-600">{record.skin_age}</p>
+                              <p className="text-xs text-gray-600">肌膚年齡</p>
+                            </div>
+                          )}
+                          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
                             <p className="text-2xl font-bold text-pink-600">{record.hydration_score || '-'}</p>
                             <p className="text-xs text-gray-600">水潤度</p>
                           </div>
-                          <div className="bg-white rounded-lg p-3 text-center">
+                          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
                             <p className="text-2xl font-bold text-orange-600">{record.radiance_score || '-'}</p>
                             <p className="text-xs text-gray-600">光澤度</p>
                           </div>
-                          <div className="bg-white rounded-lg p-3 text-center">
-                            <p className="text-2xl font-bold text-indigo-600">{record.firmness_score || '-'}</p>
+                          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+                            <p className="text-2xl font-bold text-blue-600">{record.firmness_score || '-'}</p>
                             <p className="text-xs text-gray-600">緊緻度</p>
                           </div>
+                        </div>
+
+                        {/* 顯示建議摘要 */}
+                        {record.recommendations && record.recommendations.length > 0 && (
+                          <div className="mt-3 bg-white rounded-lg p-3 shadow-sm">
+                            <p className="text-xs text-gray-500 mb-2 font-semibold">💡 護膚建議</p>
+                            <p className="text-sm text-gray-700 line-clamp-2">
+                              {typeof record.recommendations[0] === 'string' 
+                                ? record.recommendations[0]
+                                : record.recommendations[0]?.suggestion || record.recommendations[0]?.issue
+                              }
+                            </p>
+                          </div>
+                        )}
+
+                        {/* 查看詳情按鈕 */}
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            onClick={() => setSelectedRecord(record)}
+                            className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm text-sm"
+                          >
+                            📊 查看完整報告
+                          </button>
                         </div>
 
                         {record.image_url && (
@@ -620,9 +611,16 @@ ${fengShui.blessing}
 
             {/* Footer */}
             <div className="bg-gray-50 p-4 flex justify-between items-center border-t">
-              <p className="text-sm text-gray-600">
-                共 {historyRecords.length} 筆記錄
-              </p>
+              <div>
+                <p className="text-sm text-gray-600">
+                  共 {historyRecords.length} 筆記錄
+                </p>
+                {historyRecords.length > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    最新：{formatTaiwanDate(historyRecords[0].created_at)}
+                  </p>
+                )}
+              </div>
               <button
                 onClick={() => setShowHistory(false)}
                 className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-medium hover:from-purple-600 hover:to-pink-600 transition-all"
@@ -632,6 +630,14 @@ ${fengShui.blessing}
             </div>
           </div>
         </div>
+      )}
+
+      {/* 詳細記錄查看 Modal */}
+      {selectedRecord && (
+        <AnalysisDetailModal
+          record={selectedRecord}
+          onClose={() => setSelectedRecord(null)}
+        />
       )}
     </div>
   );
