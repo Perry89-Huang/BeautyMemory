@@ -5,6 +5,7 @@ import BeautyMemoryWebsiteWithAuth from './BeautyMemoryWebsiteWithAuth';
 import LotusBeautyLanding from './components/LotusBeautyLanding';
 import Heyan28DaysLanding from './components/Heyan28DaysLanding';
 import LotusBeautyLanding3 from './components/LotusBeautyLanding3';
+import VerifySuccess from './components/VerifySuccess';
 
 
 function App() {
@@ -13,6 +14,9 @@ function App() {
       <Routes>
         {/* 首頁 */}
         <Route path="/" element={<BeautyMemoryWebsiteWithAuth />} />
+        
+        {/* Email 驗證成功頁面 */}
+        <Route path="/verify-success" element={<VerifySuccess />} />
         
         {/* 荷顏產品 Landing Page */}
         <Route path="/lotusbeauty" element={<LotusBeautyLanding />} />
