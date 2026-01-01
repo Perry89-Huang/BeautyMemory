@@ -6,6 +6,7 @@ import LotusBeautyLanding from './components/LotusBeautyLanding';
 import Heyan28DaysLanding from './components/Heyan28DaysLanding';
 import LotusBeautyLanding3 from './components/LotusBeautyLanding3';
 import VerifySuccess from './components/VerifySuccess';
+import PaymentConfirm from './components/PaymentConfirm';
 
 
 function App() {
@@ -17,6 +18,9 @@ function App() {
         
         {/* Email 驗證成功頁面 */}
         <Route path="/verify-success" element={<VerifySuccess />} />
+        
+        {/* LINE Pay 付款確認頁面 */}
+        <Route path="/payment/confirm" element={<PaymentConfirm />} />
         
         {/* 荷顏產品 Landing Page */}
         <Route path="/lotusbeauty" element={<LotusBeautyLanding />} />

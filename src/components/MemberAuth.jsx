@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { BiUser, BiLock, BiEnvelope, BiPhone, BiX, BiCheck, BiError } from 'react-icons/bi';
+import { FcGoogle } from 'react-icons/fc';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000';
 
@@ -19,6 +20,7 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   // 重置表單
   useEffect(() => {
@@ -239,6 +241,42 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
     }
   };
 
+  // 處理 Google 登入
+  const handleGoogleLogin = async () => {
+    try {
+      setIsGoogleLoading(true);
+      setMessage({ type: '', text: '' });
+
+      // 呼叫後端 API 取得 Google OAuth URL
+      const response = await fetch(`${API_BASE_URL}/api/members/auth/google`, {
+        method: 'GET'
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.data.authUrl) {
+        // 儲存當前狀態，以便登入後返回
+        sessionStorage.setItem('auth_redirect', window.location.pathname);
+        
+        // 重導向到 Google 登入頁面
+        window.location.href = data.data.authUrl;
+      } else {
+        setMessage({
+          type: 'error',
+          text: 'Google 登入初始化失敗，請稍後再試'
+        });
+        setIsGoogleLoading(false);
+      }
+    } catch (error) {
+      console.error('Google 登入錯誤:', error);
+      setMessage({
+        type: 'error',
+        text: '無法連接 Google 登入服務'
+      });
+      setIsGoogleLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -285,6 +323,41 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
 
           <form onSubmit={mode === 'login' ? handleLogin : handleRegister}>
             
+            {/* Google 登入按鈕 */}
+            <div className="mb-6">
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isGoogleLoading || isLoading}
+                className="w-full py-3 bg-white border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-gray-700"
+              >
+                {isGoogleLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    連接中...
+                  </>
+                ) : (
+                  <>
+                    <FcGoogle className="w-6 h-6" />
+                    使用 Google 帳號{mode === 'login' ? '登入' : '註冊'}
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* 分隔線 */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-gray-500">或使用 Email {mode === 'login' ? '登入' : '註冊'}</span>
+              </div>
+            </div>
+
             {/* 註冊模式 - 暱稱 */}
             {mode === 'register' && (
               <div className="mb-4">

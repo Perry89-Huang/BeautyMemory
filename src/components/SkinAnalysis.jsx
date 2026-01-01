@@ -10,7 +10,8 @@ import {
   BiInfoCircle
 } from 'react-icons/bi';
 import { FiStar, FiAlertCircle } from 'react-icons/fi';
-import { getTaiwanTimestamp, getTaiwanDateString } from '../utils/timezone';
+import { getTaiwanTimestamp, getTaiwanDateString, formatTaiwanTime } from '../utils/timezone';
+import AnalysisDetailModal from './AnalysisDetailModal';
 
 /**
  * 肌膚分析項目的中文對照表
@@ -1337,41 +1338,118 @@ const SkinAnalysis = () => {
         </div>
       )}
 
-      {/* 分析結果 */}
+      {/* 分析結果 - 使用詳細報告Modal */}
       {analysisResult && !isAnalyzing && (
-        <div className="space-y-6">
-          {/* 總體評分 */}
-          <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-8 text-white shadow-xl">
-            <h2 className="text-2xl font-semibold mb-4 text-center">
-              您的肌膚檢測報告
-            </h2>
-            <div className="text-center">
-              <div className="text-6xl font-bold mb-2">
-                {analysisResult.overall_score}
+        <AnalysisDetailModal
+          record={{
+            id: 'current_analysis',
+            overall_score: analysisResult.overall_score,
+            skin_age: analysisResult.skin_age,
+            hydration_score: analysisResult.raw_data?.scores?.hydration,
+            radiance_score: analysisResult.raw_data?.scores?.radiance,
+            firmness_score: analysisResult.raw_data?.scores?.firmness,
+            feng_shui_element: analysisResult.feng_shui_element || '金',
+            feng_shui_blessing: analysisResult.feng_shui_blessing || '財運亨通',
+            recommendations: analysisResult.recommendations,
+            full_analysis_data: analysisResult.analysis,
+            skincare_routine: analysisResult.skincareRoutine,
+            image_url: analysisResult.image_url,
+            created_at: new Date().toISOString()
+          }}
+          onClose={() => {
+            setAnalysisResult(null);
+            setError(null);
+            setAiRecommendation(null);
+            setShowAIRecommendation(false);
+          }}
+        />
+      )}
+
+      {/* AI 專家推薦模態框 */}
+      {showAIRecommendation && aiRecommendation && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowAIRecommendation(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-t-2xl z-10">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <span className="text-3xl">🤖</span>
+                  AI 專家分析與推薦
+                </h3>
+                <button
+                  onClick={() => setShowAIRecommendation(false)}
+                  className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-              <div className="text-xl mb-4">整體評分</div>
-              <div className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-6 py-2">
-                <p className="text-lg">
-                  {getScoreDescription(analysisResult.overall_score).text}
-                </p>
+              <p className="text-indigo-100 mt-2 text-sm">
+                由 Claude AI 提供的專業肌膚分析建議
+              </p>
+            </div>
+            
+            <div className="p-6">
+              {/* AI 推薦內容 */}
+              <div className="prose prose-slate max-w-none">
+                <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 mb-6 border border-indigo-200">
+                  <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">
+                    {aiRecommendation.recommendation}
+                  </div>
+                </div>
+              </div>
+              
+              {/* 底部資訊 */}
+              <div className="mt-6 pt-4 border-t border-gray-200 flex items-center justify-between text-sm text-slate-500">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-semibold">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                    </svg>
+                    {aiRecommendation.model}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-400">生成時間</p>
+                  <p className="font-medium">{new Date(aiRecommendation.timestamp).toLocaleString('zh-TW')}</p>
+                </div>
+              </div>
+              
+              {/* 操作按鈕 */}
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={() => setShowAIRecommendation(false)}
+                  className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg"
+                >
+                  關閉
+                </button>
               </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* 分析總結 */}
-          <div className="bg-white rounded-2xl p-6 shadow-xl border-2 border-purple-200">
-            <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <span className="text-3xl">📋</span>
-              分析總結
-            </h3>
-            
-            <div className="grid md:grid-cols-3 gap-4 mb-6">
-              {/* 基礎狀態 */}
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border-2 border-blue-200">
-                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                  <span className="text-xl">🎨</span>
-                  基礎狀態
-                </h4>
+      {/* 紅區圖模態框 */}
+      {showRedAreaMap && analysisResult?.analysis?.face_maps?.red_area && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowRedAreaMap(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-bold text-slate-800">
+                  🗺️ 肌膚敏感區域熱力圖
+                </h3>
                 <div className="space-y-2 text-sm">
                   {analysisResult.analysis.skin_color && (
                     <div className="flex justify-between">
@@ -1575,34 +1653,19 @@ const SkinAnalysis = () => {
               <button
                 onClick={() => {
                   if (showAllDetails === 'issues') setShowAllDetails('all');
-                  else if (showAllDetails === 'all') setShowAllDetails('none');
+                  else if (showAllDetails === 'all') setShowAllDetails('issues');
                   else setShowAllDetails('issues');
                 }}
                 className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-sm font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-md flex items-center gap-2"
               >
                 <BiInfoCircle className="w-4 h-4" />
                 {showAllDetails === 'issues' ? '展開全部' : 
-                 showAllDetails === 'all' ? '隱藏全部' : 
+                 showAllDetails === 'all' ? '顯示問題' : 
                  '顯示問題'}
               </button>
             </div>
 
             {(() => {
-              // 如果狀態是 'none'，顯示隱藏提示
-              if (showAllDetails === 'none') {
-                return (
-                  <div className="text-center py-12 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border-2 border-dashed border-purple-200">
-                    <div className="text-6xl mb-4">👁️‍🗨️</div>
-                    <p className="text-lg font-semibold text-slate-700 mb-2">
-                      詳細分析結果已隱藏
-                    </p>
-                    <p className="text-sm text-slate-500 mb-4">
-                      點擊上方按鈕「顯示問題」或「展開全部」查看分析結果
-                    </p>
-                  </div>
-                );
-              }
-
               const categorized = categorizeAnalysis(analysisResult.analysis);
               
               const totalItems = Object.values(categorized).reduce((sum, items) => sum + items.length, 0);
@@ -1789,6 +1852,7 @@ const SkinAnalysis = () => {
               );
             })()}
           </div>
+          )}
 
           {/* 保養建議 */}
           <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6 shadow-lg border border-yellow-200">
@@ -2376,13 +2440,6 @@ const SkinAnalysis = () => {
                 </>
               )}
             </button>
-            <button
-              onClick={downloadReport}
-              className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg flex items-center justify-center gap-2"
-            >
-              <BiDownload className="w-5 h-5" />
-              儲存報告
-            </button>
           </div>
         </div>
       )}
@@ -2444,28 +2501,10 @@ const SkinAnalysis = () => {
               </div>
               
               {/* 操作按鈕 */}
-              <div className="mt-6 flex gap-3">
-                <button
-                  onClick={() => {
-                    const text = aiRecommendation.recommendation;
-                    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `AI專家推薦_${new Date().toISOString().split('T')[0]}.txt`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                  }}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg font-semibold hover:from-indigo-600 hover:to-purple-600 transition-all shadow-md flex items-center justify-center gap-2"
-                >
-                  <BiDownload className="w-5 h-5" />
-                  下載推薦內容
-                </button>
+              <div className="mt-6 flex justify-center">
                 <button
                   onClick={() => setShowAIRecommendation(false)}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                  className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg"
                 >
                   關閉
                 </button>

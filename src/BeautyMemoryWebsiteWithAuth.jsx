@@ -20,11 +20,191 @@ function BeautyMemoryWebsiteWithAuth() {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [quota, setQuota] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [hasMoreRecords, setHasMoreRecords] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [plans, setPlans] = useState([]);
+
+  // 清理 displayName（移除括號中的重複名字）
+  const cleanDisplayName = (name) => {
+    if (!name) return '';
+    // 如果格式是 "Name (Name)"，只保留第一個
+    const match = name.match(/^(.+?)\s*\(.*\)$/);
+    return match ? match[1].trim() : name;
+  };
+
+  // 處理 OAuth 回調
+  const handleOAuthCallback = React.useCallback(async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    
+    // 檢查是否有 error
+    const error = urlParams.get('error') || urlParams.get('error_description');
+    if (error) {
+      alert('登入失敗：' + error);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    // 方式 1: 檢查 URL query 參數中的 refreshToken (Nhost 當前版本)
+    const refreshToken = urlParams.get('refreshToken');
+    if (refreshToken) {
+      try {
+        // 使用 refreshToken 換取 accessToken
+        const response = await fetch(`${API_BASE_URL}/api/members/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ refreshToken })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            const { accessToken, user: userData } = data.data;
+
+            // 儲存 tokens 和用戶資料
+            localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken);
+            localStorage.setItem('user', JSON.stringify(userData));
+
+            setUser(userData);
+            fetchQuota(accessToken);
+
+            // 清除 URL 參數
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // 顯示歡迎訊息
+            alert(`🎉 歡迎回來，${userData.displayName || '美魔力會員'}！`);
+            return; // 成功後直接返回，不繼續執行其他邏輯
+          }
+        }
+      } catch (error) {
+        // 靜默處理錯誤，不顯示給用戶
+        console.error('OAuth callback error:', error);
+      }
+      
+      // 清除 URL 參數
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    // 方式 2: 從 hash 中解析 tokens（Nhost OAuth 標準格式）
+    if (hash && hash.includes('access_token')) {
+      try {
+        const hashParams = new URLSearchParams(hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshTokenFromHash = hashParams.get('refresh_token');
+
+        if (accessToken) {
+          const response = await fetch(`${API_BASE_URL}/api/members/profile`, {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const userData = {
+              id: data.data.id,
+              email: data.data.email,
+              displayName: data.data.displayName,
+              avatarUrl: data.data.avatarUrl,
+              memberLevel: data.data.memberLevel,
+              remainingAnalyses: data.data.remainingAnalyses
+            };
+
+            localStorage.setItem('accessToken', accessToken);
+            if (refreshTokenFromHash) {
+              localStorage.setItem('refreshToken', refreshTokenFromHash);
+            }
+            localStorage.setItem('user', JSON.stringify(userData));
+
+            setUser(userData);
+            fetchQuota(accessToken);
+
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            alert(`🎉 歡迎回來，${userData.displayName || '美魔力會員'}！`);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('OAuth hash callback error:', error);
+      }
+      
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+  }, []);
 
   // 檢查登入狀態
   useEffect(() => {
     checkLoginStatus();
-  }, []);
+    handleOAuthCallback();
+    fetchPlans();
+  }, [handleOAuthCallback]);
+
+  // 取得升級方案
+  const fetchPlans = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payment/plans`);
+      if (response.ok) {
+        const data = await response.json();
+        setPlans(data.data);
+      }
+    } catch (error) {
+      console.error('取得方案失敗:', error);
+    }
+  };
+
+  // 處理升級
+  const handleUpgrade = async (planId) => {
+    if (!user) {
+      alert('請先登入');
+      setShowAuth(true);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`${API_BASE_URL}/api/payment/linepay/request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ planId })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // 儲存訂單資訊
+        sessionStorage.setItem('pendingOrder', JSON.stringify({
+          orderId: data.data.orderId,
+          transactionId: data.data.transactionId,
+          planId: planId
+        }));
+
+        // 重定向到 LINE Pay
+        window.location.href = data.data.paymentUrl;
+      } else {
+        alert('付款請求失敗：' + data.error.message);
+      }
+    } catch (error) {
+      alert('付款請求失敗，請重試');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // 檢查登入狀態
   const checkLoginStatus = async () => {
@@ -92,11 +272,15 @@ function BeautyMemoryWebsiteWithAuth() {
 
   // 登出
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    setUser(null);
-    setQuota(null);
+    // 顯示確認視窗
+    if (window.confirm('確定要登出嗎？')) {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      setUser(null);
+      setQuota(null);
+      alert('已成功登出');
+    }
   };
 
   // 開始分析
@@ -144,19 +328,26 @@ function BeautyMemoryWebsiteWithAuth() {
     }
   };
 
-  // 查看歷史記錄（優化版，合併本地和雲端數據）
-  const viewHistory = async () => {
+  // 查看歷史紀錄（分頁加載版本）
+  const viewHistory = async (loadMore = false) => {
     if (!user) {
       alert('請先登入');
       setShowAuth(true);
       return;
     }
 
-    setIsLoading(true);
+    if (loadMore) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoadingHistory(true);
+    }
 
     try {
-      // 1. 獲取雲端記錄
-      const response = await fetch(`${API_BASE_URL}/api/analysis/history?limit=20`, {
+      const offset = loadMore ? historyRecords.length : 0;
+      const limit = 20;
+      
+      // 獲取雲端記錄（分頁）
+      const response = await fetch(`${API_BASE_URL}/api/analysis/history?limit=${limit}&offset=${offset}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -167,9 +358,13 @@ function BeautyMemoryWebsiteWithAuth() {
       
       if (data.success) {
         records = data.data.records || [];
+        const pagination = data.data.pagination || {};
+        
+        setTotalRecords(pagination.total || 0);
+        setHasMoreRecords(pagination.hasMore || false);
         
         // 調試：輸出第一筆記錄的時間格式
-        if (records.length > 0) {
+        if (records.length > 0 && !loadMore) {
           console.log('📅 資料庫時間格式檢查:', {
             raw: records[0].created_at,
             type: typeof records[0].created_at,
@@ -187,19 +382,29 @@ function BeautyMemoryWebsiteWithAuth() {
         }
       });
       
-      if (records.length === 0) {
+      if (records.length === 0 && !loadMore) {
         alert('📭 您還沒有分析記錄\n\n立即開始第一次肌膚檢測吧!');
-        setIsLoading(false);
+        setIsLoadingHistory(false);
         return;
       }
 
-      setHistoryRecords(records);
-      setShowHistory(true);
+      // 如果是加載更多，附加到現有記錄；否則替換
+      if (loadMore) {
+        setHistoryRecords(prev => [...prev, ...records]);
+      } else {
+        setHistoryRecords(records);
+        setCurrentPage(1); // 重置到第一頁
+        setShowHistory(true);
+      }
+      
+      setIsLoadingHistory(false);
+      setIsLoadingMore(false);
 
     } catch (error) {
-      console.error('查詢歷史記錄失敗:', error);
-      alert('❌ 查詢歷史記錄失敗，請稍後再試');
-      setIsLoading(false);
+      console.error('查詢歷史紀錄失敗:', error);
+      alert('❌ 查詢歷史紀錄失敗，請稍後再試');
+      setIsLoadingHistory(false);
+      setIsLoadingMore(false);
     }
   };
 
@@ -250,16 +455,16 @@ function BeautyMemoryWebsiteWithAuth() {
             </div>
 
             {/* 用戶資訊 */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               {user ? (
                 <>
                   {/* 配額顯示 */}
                   {quota && (
-                    <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-full">
-                      <BiCamera className="text-purple-600" />
-                      <span className="text-sm font-medium text-purple-700">
+                    <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 bg-purple-50 rounded-full">
+                      <BiCamera className="text-purple-600 w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="text-xs sm:text-sm font-medium text-purple-700">
                         {quota.unlimited 
-                          ? '無限次分析'
+                          ? '無限'
                           : `剩餘 ${quota.remaining} 次`
                         }
                       </span>
@@ -267,10 +472,10 @@ function BeautyMemoryWebsiteWithAuth() {
                   )}
 
                   {/* 用戶選單 */}
-                  <div className="flex items-center gap-3">
-                    <div className="hidden sm:block text-right">
-                      <p className="text-sm font-medium text-gray-700">
-                        {user.displayName || user.email}
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="text-right">
+                      <p className="text-xs sm:text-sm font-medium text-gray-700 truncate max-w-[100px] sm:max-w-none">
+                        {cleanDisplayName(user.displayName) || user.email}
                       </p>
                       <p className="text-xs text-gray-500">
                         {user.memberLevel === 'beginner' && '體驗會員'}
@@ -340,13 +545,24 @@ function BeautyMemoryWebsiteWithAuth() {
 
             {user && (
               <button
-                onClick={viewHistory}
-                className="px-8 py-4 bg-white text-purple-600 border-2 border-purple-500 rounded-full font-semibold text-lg hover:bg-purple-50 transition-all"
+                onClick={() => viewHistory(false)}
+                disabled={isLoadingHistory}
+                className="px-8 py-4 bg-white text-purple-600 border-2 border-purple-500 rounded-full font-semibold text-lg hover:bg-purple-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span className="flex items-center gap-2">
-                  <BiHistory className="w-6 h-6" />
-                  查看歷史記錄
-                </span>
+                {isLoadingHistory ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    載入中...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <BiHistory className="w-6 h-6" />
+                    查看歷史紀錄
+                  </span>
+                )}
               </button>
             )}
           </div>
@@ -467,7 +683,10 @@ function BeautyMemoryWebsiteWithAuth() {
                   <span className="font-medium">美麗記憶庫</span>
                 </li>
               </ul>
-              <button className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-md text-lg">
+              <button 
+                onClick={() => setShowUpgradeModal(true)}
+                className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-md text-lg"
+              >
                 立即升級
               </button>
             </div>
@@ -493,7 +712,7 @@ function BeautyMemoryWebsiteWithAuth() {
                 <div className="flex items-center gap-3">
                   <BiHistory className="w-8 h-8" />
                   <div>
-                    <h2 className="text-2xl font-bold">分析歷史記錄</h2>
+                    <h2 className="text-2xl font-bold">歷史紀錄</h2>
                     <p className="text-purple-100 text-sm">您的肌膚檢測歷程</p>
                   </div>
                 </div>
@@ -507,9 +726,15 @@ function BeautyMemoryWebsiteWithAuth() {
             </div>
 
             {/* Content */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-280px)]">
               <div className="space-y-4">
-                {historyRecords.map((record, index) => (
+                {(() => {
+                  const indexOfLastRecord = currentPage * recordsPerPage;
+                  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+                  const currentRecords = historyRecords.slice(indexOfFirstRecord, indexOfLastRecord);
+                  const totalPages = Math.ceil(historyRecords.length / recordsPerPage);
+
+                  return currentRecords.map((record, index) => (
                   <div
                     key={record.id}
                     className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-5 border border-purple-200 hover:shadow-lg transition-all"
@@ -518,7 +743,7 @@ function BeautyMemoryWebsiteWithAuth() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
                           <span className="bg-purple-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
-                            {index + 1}
+                            {historyRecords.length - (currentPage - 1) * recordsPerPage - index}
                           </span>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
@@ -597,7 +822,8 @@ function BeautyMemoryWebsiteWithAuth() {
                       </div>
                     </div>
                   </div>
-                ))}
+                ));
+                })()}
               </div>
 
               {historyRecords.length === 0 && (
@@ -610,23 +836,185 @@ function BeautyMemoryWebsiteWithAuth() {
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 p-4 flex justify-between items-center border-t">
-              <div>
-                <p className="text-sm text-gray-600">
-                  共 {historyRecords.length} 筆記錄
-                </p>
-                {historyRecords.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    最新：{formatTaiwanDate(historyRecords[0].created_at)}
+            <div className="bg-gray-50 p-4 border-t">
+              {/* 分頁控制 */}
+              {historyRecords.length > recordsPerPage && (
+                <div className="flex justify-center items-center gap-2 mb-4">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 bg-white border border-purple-300 text-purple-600 rounded-lg font-medium hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    上一頁
+                  </button>
+                  <div className="flex gap-1">
+                    {(() => {
+                      const totalPages = Math.ceil(historyRecords.length / recordsPerPage);
+                      const pages = [];
+                      for (let i = 1; i <= totalPages; i++) {
+                        if (
+                          i === 1 || 
+                          i === totalPages || 
+                          (i >= currentPage - 1 && i <= currentPage + 1)
+                        ) {
+                          pages.push(
+                            <button
+                              key={i}
+                              onClick={() => setCurrentPage(i)}
+                              className={`w-10 h-10 rounded-lg font-medium transition-all ${
+                                currentPage === i
+                                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                                  : 'bg-white border border-purple-300 text-purple-600 hover:bg-purple-50'
+                              }`}
+                            >
+                              {i}
+                            </button>
+                          );
+                        } else if (
+                          i === currentPage - 2 || 
+                          i === currentPage + 2
+                        ) {
+                          pages.push(
+                            <span key={i} className="w-10 h-10 flex items-center justify-center text-gray-400">
+                              ...
+                            </span>
+                          );
+                        }
+                      }
+                      return pages;
+                    })()}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(Math.ceil(historyRecords.length / recordsPerPage), currentPage + 1))}
+                    disabled={currentPage === Math.ceil(historyRecords.length / recordsPerPage)}
+                    className="px-4 py-2 bg-white border border-purple-300 text-purple-600 rounded-lg font-medium hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    下一頁
+                  </button>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-gray-600">
+                    已載入 {historyRecords.length} 筆 {totalRecords > 0 && `/ 共 ${totalRecords} 筆記錄`}
+                    {historyRecords.length > recordsPerPage && (
+                      <span className="ml-2 text-purple-600">
+                        (第 {currentPage} / {Math.ceil(historyRecords.length / recordsPerPage)} 頁)
+                      </span>
+                    )}
                   </p>
-                )}
+                  {historyRecords.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      最新：{formatTaiwanDate(historyRecords[0].created_at)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {hasMoreRecords && (
+                    <button
+                      onClick={() => viewHistory(true)}
+                      disabled={isLoadingMore}
+                      className="px-4 py-2 bg-white border border-purple-300 text-purple-600 rounded-full font-medium hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          載入中...
+                        </>
+                      ) : (
+                        '載入更多'
+                      )}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowHistory(false)}
+                    className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-medium hover:from-purple-600 hover:to-pink-600 transition-all"
+                  >
+                    關閉
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => setShowHistory(false)}
-                className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-medium hover:from-purple-600 hover:to-pink-600 transition-all"
-              >
-                關閉
-              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 升級方案 Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  選擇升級方案
+                </h2>
+                <button
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                {plans.map((plan) => (
+                  <div
+                    key={plan.id}
+                    className={`bg-white rounded-xl p-6 shadow-lg border-2 transition-all cursor-pointer hover:shadow-xl ${
+                      selectedPlan === plan.id
+                        ? 'border-purple-500 ring-2 ring-purple-200'
+                        : 'border-gray-200'
+                    }`}
+                    onClick={() => setSelectedPlan(plan.id)}
+                  >
+                    <div className="text-center mb-4">
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">{plan.name}</h3>
+                      <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        NT$ {plan.price}
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">{plan.duration}</p>
+                    </div>
+
+                    <ul className="space-y-2 mb-6">
+                      {plan.features.map((feature, index) => (
+                        <li key={index} className="flex items-start text-sm text-gray-700">
+                          <span className="text-green-500 mr-2">✓</span>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+
+                    {plan.recommended && (
+                      <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-semibold py-1 px-3 rounded-full text-center mb-2">
+                        推薦方案
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex gap-4 justify-end">
+                <button
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-all"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => handleUpgrade(selectedPlan)}
+                  disabled={!selectedPlan}
+                  className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                    selectedPlan
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-md'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  前往付款
+                </button>
+              </div>
             </div>
           </div>
         </div>

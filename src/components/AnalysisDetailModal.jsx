@@ -175,15 +175,10 @@ const AnalysisDetailModal = ({ record, onClose }) => {
       displayValue = 'N/A';
     }
 
-    const confidence = data.confidence ? `${(data.confidence * 100).toFixed(1)}%` : null;
-
     return (
       <div key={key} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-700">{label}</p>
-          {confidence && (
-            <p className="text-xs text-gray-500 mt-0.5">可信度: {confidence}</p>
-          )}
         </div>
         <div className={`px-3 py-1 rounded-lg font-semibold text-sm ${status ? `${status.color} ${status.bgColor}` : 'text-gray-700 bg-gray-100'}`}>
           {displayValue}
@@ -333,13 +328,6 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={downloadReport}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                title="下載報告"
-              >
-                <BiDownload className="w-6 h-6" />
-              </button>
-              <button
                 onClick={onClose}
                 className="p-2 hover:bg-white/20 rounded-lg transition-colors"
               >
@@ -394,7 +382,7 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-220px)]">
+        <div className="p-6 overflow-y-auto h-[calc(90vh-220px)]">
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
@@ -786,6 +774,44 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
                   本保養方案根據您的肌膚檢測結果量身定制。建議持續使用 28 天（一個肌膚更新週期）後再次檢測，追蹤改善成效。如有任何不適，請立即停用並諮詢專業人士。
                 </p>
               </div>
+
+              {/* 聯繫我們 */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-5 border-2 border-green-300">
+                <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+                  💬 需要專業諮詢？
+                </h3>
+                <p className="text-gray-700 mb-4 leading-relaxed">
+                  我們的美容專家團隊隨時為您服務！加入我們的 LINE 官方帳號，獲得：
+                </p>
+                <ul className="space-y-2 mb-4 text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold">✓</span>
+                    <span>一對一專業肌膚諮詢</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold">✓</span>
+                    <span>個性化產品推薦</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold">✓</span>
+                    <span>保養知識分享</span>
+                  </li>
+                </ul>
+                <a
+                  href="https://line.me/R/ti/p/@lotus-beauty"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full py-3 px-6 font-semibold hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                  </svg>
+                  <span>加入 LINE 官方帳號</span>
+                </a>
+                <p className="text-center text-sm text-gray-600 mt-3">
+                  LINE ID: <span className="font-semibold text-green-600">@lotus-beauty</span>
+                </p>
+              </div>
               </>
               )}
             </div>
@@ -815,7 +841,7 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
 
           {/* Recommendations Tab */}
           {activeTab === 'recommendations' && (
-            <div className="space-y-3">
+            <div className="space-y-6">
               {recommendations.length > 0 ? (
                 recommendations.map((rec, index) => {
                   const suggestion = typeof rec === 'string' ? rec : (rec.suggestion || rec.issue || '');
@@ -840,14 +866,7 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-50 p-4 flex justify-between items-center border-t">
-          <button
-            onClick={downloadReport}
-            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
-          >
-            <BiDownload className="w-5 h-5" />
-            下載報告
-          </button>
+        <div className="bg-gray-50 p-4 flex justify-end items-center border-t">
           <button
             onClick={onClose}
             className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all"
