@@ -38,6 +38,21 @@ function BeautyMemoryWebsiteWithAuth() {
     return match ? match[1].trim() : name;
   };
 
+  // 處理認證錯誤（token 過期或無效）
+  const handleAuthError = () => {
+    // 清除本地儲存
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    // 清除狀態
+    setUser(null);
+    setQuota(null);
+    setShowSkinAnalysis(false);
+    setShowHistory(false);
+    // 提示用戶
+    alert('⏰ 登入已過期，請重新登入');
+  };
+
   // 處理 OAuth 回調
   const handleOAuthCallback = React.useCallback(async () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -184,6 +199,13 @@ function BeautyMemoryWebsiteWithAuth() {
         body: JSON.stringify({ planId })
       });
 
+      // 檢查認證錯誤
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        setIsLoading(false);
+        return;
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -255,6 +277,12 @@ function BeautyMemoryWebsiteWithAuth() {
         }
       });
 
+      // 檢查認證錯誤
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        return;
+      }
+
       if (response.ok) {
         const data = await response.json();
         setQuota(data.data);
@@ -304,6 +332,13 @@ function BeautyMemoryWebsiteWithAuth() {
         }
       });
 
+      // 檢查認證錯誤
+      if (permissionResponse.status === 401 || permissionResponse.status === 403) {
+        handleAuthError();
+        setIsLoading(false);
+        return;
+      }
+
       const permissionData = await permissionResponse.json();
 
       if (!permissionData.canAnalyze) {
@@ -352,6 +387,14 @@ function BeautyMemoryWebsiteWithAuth() {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
       });
+
+      // 檢查認證錯誤
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        setIsLoadingHistory(false);
+        setIsLoadingMore(false);
+        return;
+      }
 
       const data = await response.json();
       let records = [];

@@ -260,6 +260,10 @@ const SkinAnalysis = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   
+  // 拍照確認狀態
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  
   // 共用狀態
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
@@ -513,7 +517,7 @@ const SkinAnalysis = () => {
     }
   };
 
-  // 拍照並分析
+  // 拍照並顯示確認
   const captureAndAnalyze = async () => {
     // 防止重複調用
     if (isAnalyzingRef.current) return;
@@ -539,11 +543,17 @@ const SkinAnalysis = () => {
         return;
       }
 
-      // 轉換為 File 對象
+      // 轉換為 File 對象和預覽 URL
       const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+      const previewURL = URL.createObjectURL(blob);
       
-      // 驗證並分析
-      await validateAndAnalyze(file);
+      // 儲存拍攝的照片並顯示確認畫面
+      setCapturedImage(file);
+      setPreviewUrl(previewURL);
+      setShowConfirmation(true);
+      
+      // 暫停相機
+      stopCamera();
     }, 'image/jpeg', 0.95);
   };
 
@@ -582,6 +592,24 @@ const SkinAnalysis = () => {
     };
     
     reader.readAsDataURL(file);
+  };
+
+  // 確認照片並開始分析
+  const confirmAndAnalyze = async () => {
+    if (!capturedImage) return;
+    
+    setShowConfirmation(false);
+    await validateAndAnalyze(capturedImage);
+  };
+
+  // 重新拍攝
+  const retakePhoto = () => {
+    setCapturedImage(null);
+    setPreviewUrl(null);
+    setShowConfirmation(false);
+    setError(null);
+    // 重新啟動相機
+    startCamera();
   };
 
   // 切換模式
@@ -720,6 +748,16 @@ const SkinAnalysis = () => {
       setAnalysisProgress(100);
 
       if (!response.ok) {
+        // 處理認證錯誤（token 過期）
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          alert('⏰ 登入已過期，請重新登入');
+          window.location.href = '/';
+          return;
+        }
+        
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         let errorDetails = null;
         let suggestions = [];
@@ -876,8 +914,6 @@ const SkinAnalysis = () => {
       
       if (err.message.includes('400')) {
         userFriendlyMessage = '圖片格式不正確或檔案損壞，請選擇其他照片';
-      } else if (err.message.includes('401') || err.message.includes('403')) {
-        userFriendlyMessage = 'API 認證失敗，請聯繫系統管理員';
       } else if (err.message.includes('500')) {
         userFriendlyMessage = '伺服器暫時無法處理，請稍後再試';
       } else if (err.message.includes('Failed to fetch') || err.message.includes('Network')) {
@@ -1114,54 +1150,103 @@ const SkinAnalysis = () => {
           {/* 相機模式 */}
           {cameraMode && (
             <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-center text-slate-800">
-                即時肌膚檢測
-              </h2>
-              <p className="text-center text-slate-600 text-base font-medium mb-4">
-                請面向鏡頭，確保光線充足，保持正面角度
-              </p>
+              {/* 如果正在顯示確認畫面 */}
+              {showConfirmation && previewUrl ? (
+                <div className="space-y-6">
+                  <h2 className="text-3xl font-bold text-center text-slate-800">
+                    確認照片
+                  </h2>
+                  <p className="text-center text-slate-600 text-base font-medium mb-4">
+                    請確認照片清晰，確認後將進行肌膚檢測
+                  </p>
 
-              {/* 相機畫面 */}
-              <div className="relative mx-auto max-w-2xl">
-                <div className="relative aspect-[3/4] bg-slate-900 rounded-2xl overflow-hidden">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                    style={{ transform: 'scaleX(-1)' }}
-                  />
-                  
-                  {/* 臉部框線 */}
-                  {stream && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-72 h-96 border-4 border-white rounded-full opacity-30"></div>
+                  {/* 照片預覽 */}
+                  <div className="relative mx-auto max-w-2xl">
+                    <div className="relative aspect-[3/4] bg-slate-900 rounded-2xl overflow-hidden">
+                      <img
+                        src={previewUrl}
+                        alt="拍攝的照片"
+                        className="w-full h-full object-cover"
+                        style={{ transform: 'scaleX(-1)' }}
+                      />
                     </div>
-                  )}
+                  </div>
 
-                  {/* 未開啟相機時的提示 */}
-                  {!stream && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                      <BiCamera className="w-20 h-20 mb-4 opacity-50" />
-                      <p className="text-lg">點擊下方按鈕開啟相機</p>
-                    </div>
-                  )}
+                  {/* 確認按鈕 */}
+                  <div className="flex flex-col sm:flex-row justify-center gap-3 px-4">
+                    <button
+                      onClick={confirmAndAnalyze}
+                      disabled={isAnalyzing}
+                      className={`w-full sm:w-auto px-10 py-4 rounded-3xl font-bold text-lg transition-all shadow-xl flex items-center justify-center gap-2 ${
+                        isAnalyzing
+                          ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 hover:shadow-2xl'
+                      }`}
+                    >
+                      <BiCheckCircle className="w-7 h-7" />
+                      {isAnalyzing ? '分析中...' : '確認並開始分析'}
+                    </button>
+                    <button
+                      onClick={retakePhoto}
+                      disabled={isAnalyzing}
+                      className="w-full sm:w-auto px-10 py-4 bg-white border-2 border-slate-400 text-slate-700 rounded-3xl font-bold text-lg hover:bg-slate-100 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <BiCamera className="inline w-7 h-7 mr-1" />
+                      重新拍攝
+                    </button>
+                  </div>
                 </div>
+              ) : (
+                // 原本的相機畫面
+                <>
+                  <h2 className="text-3xl font-bold text-center text-slate-800">
+                    即時肌膚檢測
+                  </h2>
+                  <p className="text-center text-slate-600 text-base font-medium mb-4">
+                    請面向鏡頭，確保光線充足，保持正面角度
+                  </p>
 
-                {/* 隱藏的 canvas 用於捕獲畫面 */}
-                <canvas ref={canvasRef} className="hidden" />
-                
-                {/* 狀態指示器 - 移到畫面外 */}
-                {stream && (
-                  <div className="flex flex-col gap-3 items-center w-full mt-4">
-                    {/* 光線狀態 */}
-                    <div className={`px-6 py-2 rounded-full font-semibold text-base shadow-lg transition-all ${
-                      lightingStatus.color === 'green'
-                        ? 'bg-green-500 text-white'
-                        : lightingStatus.color === 'yellow'
-                        ? 'bg-yellow-500 text-gray-900'
-                        : lightingStatus.color === 'red'
+                  {/* 相機畫面 */}
+                  <div className="relative mx-auto max-w-2xl">
+                    <div className="relative aspect-[3/4] bg-slate-900 rounded-2xl overflow-hidden">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover"
+                        style={{ transform: 'scaleX(-1)' }}
+                      />
+                      
+                      {/* 臉部框線 */}
+                      {stream && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-72 h-96 border-4 border-white rounded-full opacity-30"></div>
+                        </div>
+                      )}
+
+                      {/* 未開啟相機時的提示 */}
+                      {!stream && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+                          <BiCamera className="w-20 h-20 mb-4 opacity-50" />
+                          <p className="text-lg">點擊下方按鈕開啟相機</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 隱藏的 canvas 用於捕獲畫面 */}
+                    <canvas ref={canvasRef} className="hidden" />
+                    
+                    {/* 狀態指示器 - 移到畫面外 */}
+                    {stream && (
+                      <div className="flex flex-col gap-3 items-center w-full mt-4">
+                        {/* 光線狀態 */}
+                        <div className={`px-6 py-2 rounded-full font-semibold text-base shadow-lg transition-all ${
+                          lightingStatus.color === 'green'
+                            ? 'bg-green-500 text-white'
+                            : lightingStatus.color === 'yellow'
+                            ? 'bg-yellow-500 text-gray-900'
+                            : lightingStatus.color === 'red'
                         ? 'bg-red-500 text-white'
                         : 'bg-slate-600 text-white'
                     }`}>
@@ -1219,7 +1304,7 @@ const SkinAnalysis = () => {
                       }`}
                     >
                       <BiCamera className="w-7 h-7" />
-                      {isAnalyzing ? '分析中...' : '拍照並分析'}
+                      {isAnalyzing ? '分析中...' : '拍照'}
                     </button>
                     <button
                       onClick={stopCamera}
@@ -1242,6 +1327,8 @@ const SkinAnalysis = () => {
                     </span>
                   </div>
                 </div>
+              )}
+                </>
               )}
             </div>
           )}
@@ -1852,7 +1939,6 @@ const SkinAnalysis = () => {
               );
             })()}
           </div>
-          )}
 
           {/* 保養建議 */}
           <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6 shadow-lg border border-yellow-200">
