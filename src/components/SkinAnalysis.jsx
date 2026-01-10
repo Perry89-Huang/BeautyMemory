@@ -244,6 +244,18 @@ const SkinAnalysis = () => {
   // 使用環境變數或預設值
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://beautymemory-6a58c48154f4.herokuapp.com';
   
+  // 檢測是否為 iPad（支援舊版和新版 iPad）
+  const isIPad = (() => {
+    const ua = navigator.userAgent;
+    // 直接檢查 iPad
+    if (/iPad/.test(ua)) return true;
+    // iPadOS 13+ 會偽裝成 Mac，需要額外檢查觸控和螢幕尺寸
+    if (/Macintosh/.test(ua) && 'ontouchend' in document) return true;
+    // 檢查螢幕尺寸（平板通常大於 768px）
+    if (window.innerWidth >= 768 && window.innerWidth <= 1366 && 'ontouchend' in document) return true;
+    return false;
+  })();
+  
   // 相機模式狀態
   const [cameraMode, setCameraMode] = useState(true); // true: 相機模式, false: 上傳模式
   const [cameraActive, setCameraActive] = useState(false);
@@ -285,6 +297,17 @@ const SkinAnalysis = () => {
   // Refs for tracking state inside intervals
   const isAnalyzingRef = useRef(false);
   const autoCapturingRef = useRef(false);
+
+  // 在組件載入時顯示裝置檢測結果
+  useEffect(() => {
+    console.log('🔍 裝置檢測:', {
+      isIPad,
+      userAgent: navigator.userAgent,
+      hasTouch: 'ontouchend' in document,
+      screenWidth: window.innerWidth,
+      橢圓尺寸: isIPad ? '384x512px' : '288x384px'
+    });
+  }, [isIPad]);
 
   // Sync refs with state
   useEffect(() => {
@@ -383,8 +406,9 @@ const SkinAnalysis = () => {
       // 定義橢圓參數（對應 UI 上的白色橢圓框）
       const centerX = sampleWidth / 2;
       const centerY = sampleHeight / 2;
-      const radiusX = sampleWidth * 0.35; // 橢圓水平半徑
-      const radiusY = sampleHeight * 0.48; // 橢圓垂直半徑
+      // iPad 使用更大的橢圓以匹配更大的屏幕
+      const radiusX = sampleWidth * (isIPad ? 0.48 : 0.35); // 橢圓水平半徑
+      const radiusY = sampleHeight * (isIPad ? 0.62 : 0.48); // 橢圓垂直半徑
       
       let ovalPixelCount = 0;
       let ovalContentPixels = 0;
@@ -421,10 +445,19 @@ const SkinAnalysis = () => {
             }
             
             // 檢測是否有實質內容（非純黑或純白背景）
-            // 膚色範圍大致在 RGB 中偏暖色調，亮度適中
-            const isLikelyFace = brightness > 60 && brightness < 220 && 
-                                 r > 80 && g > 60 && b > 50 && 
-                                 r > b; // 膚色紅色分量通常大於藍色
+            // 強化的膚色檢測：更嚴格地識別真實臉部膚色
+            // 膚色特徵：
+            // 1. 亮度適中 (80-205)
+            // 2. 紅色分量 > 綠色分量 > 藍色分量（膚色的基本特徵）
+            // 3. RGB 值都要在合理範圍內
+            // 4. G-B 差距要足夠大（排除灰色和藍色物體）
+            // 5. R-B 差距要足夠大（確保是暖色調）
+            const isLikelyFace = brightness > 80 && brightness < 205 && 
+                                 r > 90 && g > 65 && b > 45 && 
+                                 r > g && g > b && // 膚色層次：R > G > B
+                                 (r - g) > 5 && (r - g) < 55 && // R 和 G 的差距要在合理範圍
+                                 (g - b) > 10 && // G 和 B 必須有明顯差距（排除白色/灰色物體）
+                                 (r - b) > 20; // R 和 B 差距要夠大（確保是暖色調，排除冷色調物體）
             
             if (isLikelyFace) {
               ovalContentPixels++;
@@ -469,12 +502,16 @@ const SkinAnalysis = () => {
       // 計算橢圓內的臉部覆蓋率
       const faceOvalCoverage = ovalPixelCount > 0 ? ovalContentPixels / ovalPixelCount : 0;
       
-      // 臉部位置評估：確保臉部至少佔橢圓 60% 面積
-      // 紅(0-0.35)、黃(0.35-0.60)、綠(0.60-1)
+      // 臉部位置評估：針對不同裝置調整閾值
+      // iPad: 紅(0-0.25)、黃(0.25-0.38)、綠(0.38-1)
+      // 其他裝置: 紅(0-0.35)、黃(0.35-0.50)、綠(0.50-1)
       let newDistanceStatus;
-      if (faceOvalCoverage >= 0.60) {
+      const greenThreshold = isIPad ? 0.38 : 0.50;
+      const yellowThreshold = isIPad ? 0.25 : 0.35;
+      
+      if (faceOvalCoverage >= greenThreshold) {
         newDistanceStatus = { status: 'good', text: '位置正確', color: 'green' };
-      } else if (faceOvalCoverage >= 0.35) {
+      } else if (faceOvalCoverage >= yellowThreshold) {
         newDistanceStatus = { status: 'warning', text: '請將臉靠近一些', color: 'yellow' };
       } else {
         newDistanceStatus = { status: 'bad', text: '請將臉移入框內', color: 'red' };
@@ -482,6 +519,18 @@ const SkinAnalysis = () => {
       
       setLightingStatus(newLightingStatus);
       setDistanceStatus(newDistanceStatus);
+      
+      // 調試資訊：顯示檢測數據（可以在開發時查看）
+      if (faceOvalCoverage > 0.3) {
+        console.log('🔍 臉部檢測數據:', {
+          覆蓋率: `${(faceOvalCoverage * 100).toFixed(1)}%`,
+          光線狀態: newLightingStatus.text,
+          位置狀態: newDistanceStatus.text,
+          橢圓像素: ovalPixelCount,
+          臉部像素: ovalContentPixels,
+          平均亮度: ovalAvgBrightness.toFixed(1)
+        });
+      }
       
       const bothGreen = newLightingStatus.color === 'green' && newDistanceStatus.color === 'green';
       setFaceDetected(bothGreen);
@@ -1221,7 +1270,13 @@ const SkinAnalysis = () => {
                       {/* 臉部框線 */}
                       {stream && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-72 h-96 border-4 border-white rounded-full opacity-30"></div>
+                          <div 
+                            className="border-4 border-white rounded-full opacity-30"
+                            style={{
+                              width: isIPad ? '460px' : '288px',
+                              height: isIPad ? '600px' : '384px'
+                            }}
+                          ></div>
                         </div>
                       )}
 
