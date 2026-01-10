@@ -305,7 +305,7 @@ const SkinAnalysis = () => {
       userAgent: navigator.userAgent,
       hasTouch: 'ontouchend' in document,
       screenWidth: window.innerWidth,
-      橢圓尺寸: isIPad ? '384x512px' : '288x384px'
+      橢圓尺寸: isIPad ? '128x127px (40%x53%)' : '112x115px (35%x48%)'
     });
   }, [isIPad]);
 
@@ -406,9 +406,9 @@ const SkinAnalysis = () => {
       // 定義橢圓參數（對應 UI 上的白色橢圓框）
       const centerX = sampleWidth / 2;
       const centerY = sampleHeight / 2;
-      // iPad 使用更大的橢圓以匹配更大的屏幕
-      const radiusX = sampleWidth * (isIPad ? 0.48 : 0.35); // 橢圓水平半徑
-      const radiusY = sampleHeight * (isIPad ? 0.62 : 0.48); // 橢圓垂直半徑
+      // iPad 使用適中的橢圓以符合真實人臉大小
+      const radiusX = sampleWidth * (isIPad ? 0.40 : 0.35); // 橢圓水平半徑
+      const radiusY = sampleHeight * (isIPad ? 0.53 : 0.48); // 橢圓垂直半徑
       
       let ovalPixelCount = 0;
       let ovalContentPixels = 0;
@@ -503,11 +503,11 @@ const SkinAnalysis = () => {
       const faceOvalCoverage = ovalPixelCount > 0 ? ovalContentPixels / ovalPixelCount : 0;
       
       // 臉部位置評估：針對不同裝置調整閾值
-      // iPad: 紅(0-0.25)、黃(0.25-0.38)、綠(0.38-1)
-      // 其他裝置: 紅(0-0.35)、黃(0.35-0.50)、綠(0.50-1)
+      // iPad: 紅(0-0.12)、黃(0.12-0.20)、綠(0.20-1)
+      // 其他裝置: 紅(0-0.25)、黃(0.25-0.40)、綠(0.40-1)
       let newDistanceStatus;
-      const greenThreshold = isIPad ? 0.38 : 0.50;
-      const yellowThreshold = isIPad ? 0.25 : 0.35;
+      const greenThreshold = isIPad ? 0.10 : 0.40;
+      const yellowThreshold = isIPad ? 0.7 : 0.25;
       
       if (faceOvalCoverage >= greenThreshold) {
         newDistanceStatus = { status: 'good', text: '位置正確', color: 'green' };
@@ -1157,7 +1157,7 @@ const SkinAnalysis = () => {
       {/* 頁首 */}
       <div className="text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent mb-4">
-          (功能開發中.... 目前為測試版) <br /> <br /> AI 智慧肌膚檢測 
+          AI 智慧肌膚檢測 
         </h1>
         <p className="text-xl text-slate-600 mb-6">
           運用尖端科技,洞察肌膚真實狀態
@@ -1273,8 +1273,8 @@ const SkinAnalysis = () => {
                           <div 
                             className="border-4 border-white rounded-full opacity-30"
                             style={{
-                              width: isIPad ? '460px' : '288px',
-                              height: isIPad ? '600px' : '384px'
+                              width: isIPad ? '380px' : '288px',
+                              height: isIPad ? '500px' : '384px'
                             }}
                           ></div>
                         </div>
