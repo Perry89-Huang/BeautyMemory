@@ -27,45 +27,14 @@ const LiveSkinDiagnostic = () => {
   const [overallStatus, setOverallStatus] = useState('等待檢測中...');
   const [recommendations, setRecommendations] = useState([]);
   const [showRecommendations, setShowRecommendations] = useState(false);
-  const [fengShuiTiming, setFengShuiTiming] = useState({
-    timing: '平衡時辰',
-    recommendation: '適合基礎護理'
-  });
-
   // Refs
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const analysisIntervalRef = useRef(null);
 
-  // Update feng shui timing
-  const updateFengShuiTiming = () => {
-    const hour = new Date().getHours();
-    const fireHours = [7, 8, 9, 11, 12, 13];
-    const waterHours = [19, 20, 21, 23, 0, 1];
-    
-    let timing, recommendation;
-    
-    if (fireHours.includes(hour)) {
-      timing = '離火時辰';
-      recommendation = '適合美白和提亮護理';
-    } else if (waterHours.includes(hour)) {
-      timing = '水元素時辰';
-      recommendation = '適合深層保濕和修復';
-    } else {
-      timing = '平衡時辰';
-      recommendation = '適合基礎護理';
-    }
-    
-    setFengShuiTiming({ timing, recommendation });
-  };
-
   // Initialize and cleanup
   useEffect(() => {
-    updateFengShuiTiming();
-    const interval = setInterval(updateFengShuiTiming, 60000);
-    
     return () => {
-      clearInterval(interval);
       // Cleanup camera when component unmounts
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -179,8 +148,7 @@ const LiveSkinDiagnostic = () => {
       "建議加強保濕護理，使用含玻尿酸成分的精華液",
       "定期使用溫和去角質產品，改善肌膚紋理",
       "使用含維他命C的精華，提升肌膚亮澤度",
-      "加強防曬保護，預防色斑形成",
-      "配合九紫離火運時機，午時進行重點護理"
+      "加強防曬保護，預防色斑形成"
     ];
 
     const selectedRecs = allRecommendations.slice(0, 3);
@@ -310,13 +278,6 @@ const LiveSkinDiagnostic = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      {/* Feng Shui Timing Banner */}
-      <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-center py-2 px-4">
-        <p className="text-sm font-medium">
-          🔥 2025 九紫離火運 • {fengShuiTiming.timing} • {fengShuiTiming.recommendation} • 立即體驗最佳護膚時機
-        </p>
-      </div>
-
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-purple-200 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -354,7 +315,7 @@ const LiveSkinDiagnostic = () => {
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
             採用 AILabTools AI 技術，即時分析14項肌膚指標<br/>
-            95% 醫師級準確率 • 結合2025九紫離火運最佳護膚時機
+            95% 醫師級準確率
           </p>
           <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
             <button 
@@ -1036,12 +997,7 @@ const LiveSkinDiagnostic = () => {
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-purple-50 rounded-lg">
-                <h4 className="font-semibold text-purple-800 mb-2">🔮 九紫離火運建議</h4>
-                <p className="text-sm text-purple-700">
-                  當前火元素旺盛，適合進行美白和提亮護理。建議在午時（11:00-13:00）進行重點護膚，效果更佳。
-                </p>
-              </div>
+              {/* 風水建議區塊已移除 */}
             </div>
           </div>
         </div>

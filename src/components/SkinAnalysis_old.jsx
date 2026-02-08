@@ -681,14 +681,7 @@ const SkinAnalysis = () => {
         </p>
 
         <div className="max-w-3xl mx-auto bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-6 border border-orange-200 mb-8">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <FiStar className="w-6 h-6 text-red-500" />
-            <h3 className="text-xl font-semibold text-red-800">九紫離火運與美麗新契機</h3>
-          </div>
-          <p className="text-slate-700 leading-relaxed">
-            從 2024 年開始,我們進入「九紫離火運」時代,這是一個強調光明、智慧與美學的二十年週期。
-            透過科技了解自己的肌膚,正是順應時代能量,以智慧之光照亮美麗之路的最佳體現。
-          </p>
+          {/* 九紫離火運區塊已移除 */}
         </div>
       </div>
 

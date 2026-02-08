@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>瀏覽器檢測工具 - 美魔力</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .status.safe {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #10b981;
+        }
+        
+        .status.warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 2px solid #f59e0b;
+        }
+        
+        .info-box {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .info-box h3 {
+            color: #374151;
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .info-box p {
+            color: #6b7280;
+            font-size: 13px;
+            line-height: 1.6;
+            word-break: break-all;
+        }
+        
+        .guide {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .guide h3 {
+            color: #1e40af;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .guide ol {
+            margin-left: 20px;
+            color: #1e3a8a;
+        }
+        
+        .guide li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+        }
+        
+        button:hover {
+            opacity: 0.9;
+        }
+        
+        .icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 瀏覽器環境檢測</h1>
+        
+        <div id="status" class="status">
+            <div class="icon">⏳</div>
+            <div>正在檢測...</div>
+        </div>
+        
+        <div class="info-box">
+            <h3>📱 User Agent</h3>
+            <p id="userAgent">載入中...</p>
+        </div>
+        
+        <div class="info-box">
+            <h3>🌐 瀏覽器類型</h3>
+            <p id="browserType">載入中...</p>
+        </div>
+        
+        <div class="info-box">
+            <h3>✅ Google OAuth 相容性</h3>
+            <p id="compatibility">載入中...</p>
+        </div>
+        
+        <div id="guide"></div>
+        
+        <button onclick="copyUrl()">📋 複製網址（在其他瀏覽器開啟）</button>
+        <button onclick="location.href='/'">🏠 返回首頁</button>
+    </div>
+
+    <script>
+        function detectBrowser() {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            
+            // 檢測各種內建瀏覽器
+            if (ua.includes('Line/') || ua.includes('LIFF/')) {
+                return { type: 'LINE', safe: false };
+            }
+            if (ua.includes('FBAN') || ua.includes('FBAV')) {
+                return { type: 'Facebook', safe: false };
+            }
+            if (ua.includes('Instagram')) {
+                return { type: 'Instagram', safe: false };
+            }
+            if (ua.includes('Twitter')) {
+                return { type: 'Twitter', safe: false };
+            }
+            if (ua.includes('wv') || ua.includes('WebView')) {
+                return { type: 'WebView (內建瀏覽器)', safe: false };
+            }
+            
+            // 檢測正常瀏覽器
+            if (ua.includes('Chrome') && !ua.includes('Edge')) {
+                return { type: 'Chrome', safe: true };
+            }
+            if (ua.includes('Safari') && !ua.includes('Chrome')) {
+                return { type: 'Safari', safe: true };
+            }
+            if (ua.includes('Firefox')) {
+                return { type: 'Firefox', safe: true };
+            }
+            if (ua.includes('Edge')) {
+                return { type: 'Edge', safe: true };
+            }
+            
+            return { type: '未知瀏覽器', safe: false };
+        }
+
+        function updateUI() {
+            const ua = navigator.userAgent;
+            const browser = detectBrowser();
+            
+            // 更新 User Agent
+            document.getElementById('userAgent').textContent = ua;
+            
+            // 更新瀏覽器類型
+            document.getElementById('browserType').textContent = browser.type;
+            
+            // 更新相容性
+            const compatibilityEl = document.getElementById('compatibility');
+            if (browser.safe) {
+                compatibilityEl.innerHTML = '✅ <strong>完全相容</strong> - 可以正常使用 Google 登入';
+            } else {
+                compatibilityEl.innerHTML = '❌ <strong>不相容</strong> - 此環境無法使用 Google OAuth';
+            }
+            
+            // 更新狀態
+            const statusEl = document.getElementById('status');
+            if (browser.safe) {
+                statusEl.className = 'status safe';
+                statusEl.innerHTML = `
+                    <div class="icon">✅</div>
+                    <div><strong>環境安全</strong><br>您可以正常使用 Google 帳號登入</div>
+                `;
+            } else {
+                statusEl.className = 'status warning';
+                statusEl.innerHTML = `
+                    <div class="icon">⚠️</div>
+                    <div><strong>檢測到 ${browser.type} 內建瀏覽器</strong><br>Google 登入可能無法使用</div>
+                `;
+                
+                // 顯示指引
+                const guideEl = document.getElementById('guide');
+                guideEl.className = 'guide';
+                guideEl.innerHTML = `
+                    <h3>📖 如何解決？</h3>
+                    <ol>
+                        <li>點擊右上角的 <strong>「⋯」選單</strong></li>
+                        <li>選擇 <strong>「在瀏覽器中開啟」</strong> 或 <strong>「在 Safari/Chrome 中開啟」</strong></li>
+                        <li>或點擊下方按鈕複製網址，然後在 Safari/Chrome 中貼上開啟</li>
+                        <li>在正常瀏覽器中即可使用 Google 登入</li>
+                    </ol>
+                    <p style="margin-top: 10px; color: #6b7280; font-size: 12px;">
+                        💡 提示：也可以使用 Email 和密碼註冊/登入，不受瀏覽器限制
+                    </p>
+                `;
+            }
+        }
+
+        function copyUrl() {
+            const url = window.location.origin;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('✅ 網址已複製！\n\n請在 Safari、Chrome 或其他瀏覽器中開啟');
+                }).catch(() => {
+                    prompt('請複製以下網址：', url);
+                });
+            } else {
+                prompt('請複製以下網址：', url);
+            }
+        }
+
+        // 頁面載入時執行檢測
+        updateUI();
+    </script>
+</body>
+</html>

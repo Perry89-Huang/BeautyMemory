@@ -265,8 +265,6 @@ const SkinAnalysis = () => {
   const [lightingStatus, setLightingStatus] = useState({ status: 'checking', text: '檢測中', color: 'gray' });
   const [distanceStatus, setDistanceStatus] = useState({ status: 'checking', text: '檢測中', color: 'gray' });
   const [faceDetected, setFaceDetected] = useState(false);
-  const [greenStatusTime, setGreenStatusTime] = useState(0);
-  const [autoCapturing, setAutoCapturing] = useState(false);
   
   // 上傳模式狀態
   const [selectedImage, setSelectedImage] = useState(null);
@@ -296,7 +294,6 @@ const SkinAnalysis = () => {
   
   // Refs for tracking state inside intervals
   const isAnalyzingRef = useRef(false);
-  const autoCapturingRef = useRef(false);
 
   // 在組件載入時顯示裝置檢測結果
   useEffect(() => {
@@ -313,10 +310,6 @@ const SkinAnalysis = () => {
   useEffect(() => {
     isAnalyzingRef.current = isAnalyzing;
   }, [isAnalyzing]);
-
-  useEffect(() => {
-    autoCapturingRef.current = autoCapturing;
-  }, [autoCapturing]);
 
   // 清理相機資源
   useEffect(() => {
@@ -339,8 +332,6 @@ const SkinAnalysis = () => {
     setFaceDetected(false);
     setLightingStatus({ status: 'checking', text: '檢測中', color: 'gray' });
     setDistanceStatus({ status: 'checking', text: '檢測中', color: 'gray' });
-    setGreenStatusTime(0);
-    setAutoCapturing(false);
     if (detectionIntervalRef.current) {
       clearInterval(detectionIntervalRef.current);
       detectionIntervalRef.current = null;
@@ -534,30 +525,6 @@ const SkinAnalysis = () => {
       
       const bothGreen = newLightingStatus.color === 'green' && newDistanceStatus.color === 'green';
       setFaceDetected(bothGreen);
-      
-      // 自動拍照邏輯：兩個指標都是綠色持續 2 秒
-      if (bothGreen) {
-        setGreenStatusTime(prev => {
-          const newTime = prev + 1; // 每秒增加 1（檢測間隔為 1000ms）
-          
-          // 使用 Ref 檢查狀態，避免閉包導致的舊狀態問題
-          if (newTime >= 2 && !autoCapturingRef.current && !isAnalyzingRef.current) {
-            // 達到 2 秒，觸發自動拍照
-            setAutoCapturing(true);
-            // 立即更新 ref 以防止在下一次渲染前重複觸發
-            autoCapturingRef.current = true;
-            
-            setTimeout(() => {
-              captureAndAnalyze();
-            }, 100);
-          }
-          return newTime;
-        });
-      } else {
-        setGreenStatusTime(0);
-        setAutoCapturing(false);
-        autoCapturingRef.current = false;
-      }
       
     } catch (error) {
       // 發生錯誤時使用保守的狀態
@@ -910,7 +877,6 @@ const SkinAnalysis = () => {
         
         // 保存分析結果到本地存儲（包含完整數據和保養方案）
         try {
-          const fengShuiInfo = data.data?.fengShui || {};
           const savedRecord = {
             id: data.data?.recordId || `local_${Date.now()}`,
             created_at: getTaiwanTimestamp(),
@@ -922,9 +888,6 @@ const SkinAnalysis = () => {
             recommendations: recommendations,
             skincare_routine: data.data?.skincareRoutine || null,
             face_rectangle: data.data?.face_rectangle || data.data?.analysis?.face_rectangle,
-            feng_shui: fengShuiInfo,
-            feng_shui_element: fengShuiInfo.element || '未知',
-            feng_shui_blessing: fengShuiInfo.blessing || '',
             userMode: data.data?.userMode || 'member',
             source: 'local'
           };
@@ -1153,62 +1116,19 @@ const SkinAnalysis = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
+    <div className="max-w-6xl mx-auto px-1 py-2 sm:py-6">
       {/* 頁首 */}
-      <div className="text-center mb-12">
-        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent mb-4">
-          AI 智慧肌膚檢測 
-        </h1>
-        <p className="text-xl text-slate-600 mb-6">
-          運用尖端科技,洞察肌膚真實狀態
-        </p>
 
-      </div>
 
       {/* 檢測區域 */}
       {!analysisResult && (
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-purple-100">
-          {/* 模式切換 */}
-          <div className="flex justify-center mb-6">
-            <div className="flex w-full max-w-md rounded-2xl border-2 border-purple-200 p-1.5 bg-purple-50 shadow-md">
-              <button
-                onClick={() => cameraMode || switchMode()}
-                className={`flex-1 py-3 rounded-xl transition-all font-semibold text-sm sm:text-base flex items-center justify-center ${
-                  cameraMode
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                    : 'text-slate-600 hover:text-purple-600'
-                }`}
-              >
-                <BiCamera className="inline w-5 h-5 mr-1 sm:mr-2" />
-                即時檢測
-              </button>
-              <button
-                onClick={() => !cameraMode || switchMode()}
-                className={`flex-1 py-3 rounded-xl transition-all font-semibold text-sm sm:text-base flex items-center justify-center ${
-                  !cameraMode
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                    : 'text-slate-600 hover:text-purple-600'
-                }`}
-              >
-                <BiUpload className="inline w-5 h-5 mr-1 sm:mr-2" />
-                上傳照片
-              </button>
-            </div>
-          </div>
-
+        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-purple-100">
           {/* 相機模式 */}
           {cameraMode && (
-            <div className="space-y-6">
+            <div className="space-y-3">
               {/* 如果正在顯示確認畫面 */}
               {showConfirmation && previewUrl ? (
-                <div className="space-y-6">
-                  <h2 className="text-3xl font-bold text-center text-slate-800">
-                    確認照片
-                  </h2>
-                  <p className="text-center text-slate-600 text-base font-medium mb-4">
-                    請確認照片清晰，確認後將進行肌膚檢測
-                  </p>
-
+                <div className="space-y-3">
                   {/* 照片預覽 */}
                   <div className="relative mx-auto max-w-2xl">
                     <div className="relative aspect-[3/4] bg-slate-900 rounded-2xl overflow-hidden">
@@ -1221,8 +1141,22 @@ const SkinAnalysis = () => {
                     </div>
                   </div>
 
+                  <h2 className="text-3xl font-bold text-center text-slate-800">
+                    確認照片
+                  </h2>
+
                   {/* 確認按鈕 */}
                   <div className="flex flex-col sm:flex-row justify-center gap-3 px-4">
+                                        <button
+                      onClick={retakePhoto}
+                      disabled={isAnalyzing}
+                      className="w-full sm:w-auto px-10 py-4 bg-white border-2 border-slate-400 text-slate-700 rounded-3xl font-bold text-lg hover:bg-slate-100 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <BiCamera className="inline w-7 h-7 mr-1" />
+                      重新拍攝
+                    </button>
+
+                    
                     <button
                       onClick={confirmAndAnalyze}
                       disabled={isAnalyzing}
@@ -1235,25 +1169,24 @@ const SkinAnalysis = () => {
                       <BiCheckCircle className="w-7 h-7" />
                       {isAnalyzing ? '分析中...' : '確認並開始分析'}
                     </button>
-                    <button
-                      onClick={retakePhoto}
-                      disabled={isAnalyzing}
-                      className="w-full sm:w-auto px-10 py-4 bg-white border-2 border-slate-400 text-slate-700 rounded-3xl font-bold text-lg hover:bg-slate-100 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <BiCamera className="inline w-7 h-7 mr-1" />
-                      重新拍攝
-                    </button>
+
                   </div>
                 </div>
               ) : (
                 // 原本的相機畫面
                 <>
-                  <h2 className="text-3xl font-bold text-center text-slate-800">
-                    即時肌膚檢測
-                  </h2>
-                  <p className="text-center text-slate-600 text-base font-medium mb-4">
-                    請面向鏡頭，確保光線充足，保持正面角度
-                  </p>
+                  {/* 開啟相機按鈕 - 放在上方 */}
+                  {!stream && (
+                    <div className="flex justify-center mb-2">
+                      <button
+                        onClick={startCamera}
+                        className="px-10 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-3xl font-bold text-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-2"
+                      >
+                        <BiCamera className="w-7 h-7" />
+                        開啟相機
+                      </button>
+                    </div>
+                  )}
 
                   {/* 相機畫面 */}
                   <div className="relative mx-auto max-w-2xl">
@@ -1267,16 +1200,49 @@ const SkinAnalysis = () => {
                         style={{ transform: 'scaleX(-1)' }}
                       />
                       
-                      {/* 臉部框線 */}
+                      {/* 臉部框線 with 眼睛和鼻子位置 */}
                       {stream && (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div 
-                            className="border-4 border-white rounded-full opacity-30"
+                            className="relative"
                             style={{
                               width: isIPad ? '380px' : '288px',
                               height: isIPad ? '500px' : '384px'
                             }}
-                          ></div>
+                          >
+                            {/* Oval border */}
+                            <div className="absolute inset-0 border-4 border-white rounded-full opacity-30"></div>
+                            
+                            {/* 左眼 */}
+                            <div 
+                              className="absolute w-8 h-8 border-2 border-white rounded-full opacity-50"
+                              style={{
+                                left: '30%',
+                                top: '35%',
+                                transform: 'translate(-50%, -50%)'
+                              }}
+                            ></div>
+                            
+                            {/* 右眼 */}
+                            <div 
+                              className="absolute w-8 h-8 border-2 border-white rounded-full opacity-50"
+                              style={{
+                                left: '70%',
+                                top: '35%',
+                                transform: 'translate(-50%, -50%)'
+                              }}
+                            ></div>
+                            
+                            {/* 鼻子 (小圓點) */}
+                            <div 
+                              className="absolute w-4 h-6 border-2 border-white rounded-full opacity-50"
+                              style={{
+                                left: '50%',
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)'
+                              }}
+                            ></div>
+                          </div>
                         </div>
                       )}
 
@@ -1307,53 +1273,19 @@ const SkinAnalysis = () => {
                     }`}>
                       💡 Lighting: {lightingStatus.text}
                     </div>
-                    
-                    {/* 臉部位置狀態 */}
-                    <div className={`px-6 py-2 rounded-full font-semibold text-base shadow-lg transition-all ${
-                      distanceStatus.color === 'green'
-                        ? 'bg-green-500 text-white'
-                        : distanceStatus.color === 'yellow'
-                        ? 'bg-yellow-500 text-gray-900'
-                        : distanceStatus.color === 'red'
-                        ? 'bg-red-500 text-white'
-                        : 'bg-slate-600 text-white'
-                    }`}>
-                      📍 Face Position: {distanceStatus.text}
-                    </div>
-                    
-                    {/* 自動拍照倒數提示 */}
-                    {greenStatusTime > 0 && greenStatusTime < 2 && (
-                      <div className="px-6 py-2 bg-blue-500 text-white rounded-full font-bold text-lg shadow-lg animate-pulse">
-                        ✓ 保持不動 {2 - greenStatusTime} 秒
-                      </div>
-                    )}
-                    
-                    {autoCapturing && (
-                      <div className="px-6 py-2 bg-purple-500 text-white rounded-full font-bold text-lg shadow-lg animate-pulse">
-                        📸 正在拍攝...
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
 
               {/* 控制按鈕 */}
               <div className="flex flex-col sm:flex-row justify-center gap-3 px-4">
-                {!stream ? (
-                  <button
-                    onClick={startCamera}
-                    className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-3xl font-bold text-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-2"
-                  >
-                    <BiCamera className="w-7 h-7" />
-                    即時檢測
-                  </button>
-                ) : (
+                {stream && (
                   <>
                     <button
                       onClick={captureAndAnalyze}
-                      disabled={!faceDetected || isAnalyzing}
+                      disabled={lightingStatus.color !== 'green' || isAnalyzing}
                       className={`w-full sm:w-auto px-10 py-4 rounded-3xl font-bold text-lg transition-all shadow-xl flex items-center justify-center gap-2 ${
-                        faceDetected && !isAnalyzing
+                        lightingStatus.color === 'green' && !isAnalyzing
                           ? 'bg-blue-400 text-white hover:bg-blue-500 hover:shadow-2xl'
                           : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                       }`}
@@ -1373,12 +1305,12 @@ const SkinAnalysis = () => {
               </div>
 
               {/* 提示訊息 */}
-              {stream && !faceDetected && (
+              {stream && lightingStatus.color !== 'green' && (
                 <div className="text-center bg-orange-100 rounded-2xl p-5 border-2 border-orange-300 mx-4">
                   <div className="flex items-center justify-center gap-2 text-orange-700">
                     <FiAlertCircle className="w-6 h-6" />
                     <span className="font-semibold text-base">
-                      請調整位置，確保光線充足、正面角度、適當距離
+                      請調整光線位置，確保光線充足才能拍照
                     </span>
                   </div>
                 </div>
@@ -1480,6 +1412,109 @@ const SkinAnalysis = () => {
         </div>
       )}
 
+      {/* 模式切換 - 優化版本，更清楚的功能說明 */}
+      {!analysisResult && (
+        <div className="flex justify-center mt-8 mb-8">
+          <div className="w-full max-w-2xl px-4">
+            {/* 標題說明 */}
+            <div className="text-center mb-3">
+              <p className="text-sm text-slate-600 font-medium">請選擇檢測方式（二選一）</p>
+            </div>
+            
+            {/* 按鈕組 - 使用 radio button 風格 */}
+            <div className="flex flex-row gap-3">
+              <button
+                onClick={() => cameraMode || switchMode()}
+                className={`flex-1 relative overflow-hidden transition-all duration-300 ${
+                  cameraMode
+                    ? 'ring-4 ring-purple-500 ring-opacity-50'
+                    : 'hover:ring-2 hover:ring-purple-300'
+                }`}
+              >
+                <div className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                  cameraMode
+                    ? 'bg-gradient-to-br from-purple-500 to-pink-500 border-purple-600 shadow-lg'
+                    : 'bg-white border-slate-300 shadow hover:border-purple-400 hover:shadow-md'
+                }`}>
+                  {/* 選中標記 */}
+                  {cameraMode && (
+                    <div className="absolute top-2 right-2 bg-white rounded-full p-0.5">
+                      <BiCheckCircle className="w-5 h-5 text-purple-600" />
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-col items-center text-center space-y-2">
+                    <div className={`p-3 rounded-full ${
+                      cameraMode ? 'bg-white bg-opacity-20' : 'bg-purple-100'
+                    }`}>
+                      <BiCamera className={`w-7 h-7 ${
+                        cameraMode ? 'text-white' : 'text-purple-600'
+                      }`} />
+                    </div>
+                    <div>
+                      <div className={`text-base font-bold ${
+                        cameraMode ? 'text-white' : 'text-slate-800'
+                      }`}>
+                        即時鏡頭檢測
+                      </div>
+                      <div className={`text-xs mt-1 ${
+                        cameraMode ? 'text-purple-100' : 'text-slate-500'
+                      }`}>
+                        開啟相機即時拍攝
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => !cameraMode || switchMode()}
+                className={`flex-1 relative overflow-hidden transition-all duration-300 ${
+                  !cameraMode
+                    ? 'ring-4 ring-purple-500 ring-opacity-50'
+                    : 'hover:ring-2 hover:ring-purple-300'
+                }`}
+              >
+                <div className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                  !cameraMode
+                    ? 'bg-gradient-to-br from-purple-500 to-pink-500 border-purple-600 shadow-lg'
+                    : 'bg-white border-slate-300 shadow hover:border-purple-400 hover:shadow-md'
+                }`}>
+                  {/* 選中標記 */}
+                  {!cameraMode && (
+                    <div className="absolute top-2 right-2 bg-white rounded-full p-0.5">
+                      <BiCheckCircle className="w-5 h-5 text-purple-600" />
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-col items-center text-center space-y-2">
+                    <div className={`p-3 rounded-full ${
+                      !cameraMode ? 'bg-white bg-opacity-20' : 'bg-purple-100'
+                    }`}>
+                      <BiUpload className={`w-7 h-7 ${
+                        !cameraMode ? 'text-white' : 'text-purple-600'
+                      }`} />
+                    </div>
+                    <div>
+                      <div className={`text-base font-bold ${
+                        !cameraMode ? 'text-white' : 'text-slate-800'
+                      }`}>
+                        上傳照片檢測
+                      </div>
+                      <div className={`text-xs mt-1 ${
+                        !cameraMode ? 'text-purple-100' : 'text-slate-500'
+                      }`}>
+                        從相簿選擇照片
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}      
+
       {/* 分析結果 - 使用詳細報告Modal */}
       {analysisResult && !isAnalyzing && (
         <AnalysisDetailModal
@@ -1490,8 +1525,6 @@ const SkinAnalysis = () => {
             hydration_score: analysisResult.raw_data?.scores?.hydration,
             radiance_score: analysisResult.raw_data?.scores?.radiance,
             firmness_score: analysisResult.raw_data?.scores?.firmness,
-            feng_shui_element: analysisResult.feng_shui_element || '金',
-            feng_shui_blessing: analysisResult.feng_shui_blessing || '財運亨通',
             recommendations: analysisResult.recommendations,
             full_analysis_data: analysisResult.analysis,
             skincare_routine: analysisResult.skincareRoutine,

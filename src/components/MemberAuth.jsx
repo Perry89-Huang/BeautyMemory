@@ -21,6 +21,8 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [showBrowserPrompt, setShowBrowserPrompt] = useState(false);
+  const [detectedBrowser, setDetectedBrowser] = useState('');
 
   // 重置表單
   useEffect(() => {
@@ -35,8 +37,81 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
       setErrors({});
       setMessage({ type: '', text: '' });
       setRegistrationSuccess(false);
+      setIsGoogleLoading(false); // 重置 Google 登入載入狀態
     }
   }, [isOpen]);
+
+  // 監聽頁面可見性變化，處理用戶從 OAuth 返回的情況
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // 檢查是否有 OAuth 標記
+        const authInitiated = sessionStorage.getItem('google_auth_initiated');
+        
+        if (authInitiated && isGoogleLoading) {
+          // 用戶從 OAuth 流程返回，但沒有完成登入
+          const initiatedTime = parseInt(authInitiated);
+          const now = Date.now();
+          
+          // 如果距離發起 OAuth 不到 1 秒，可能只是正常的頁面切換
+          if (now - initiatedTime < 1000) {
+            return;
+          }
+          
+          // 清除標記並重置狀態
+          sessionStorage.removeItem('google_auth_initiated');
+          setIsGoogleLoading(false);
+          
+          // 不顯示錯誤訊息，因為用戶可能只是取消了登入
+          // 讓他們可以重新嘗試
+        }
+      }
+    };
+
+    const handleWindowFocus = () => {
+      // 當視窗重新獲得焦點時的處理
+      const authInitiated = sessionStorage.getItem('google_auth_initiated');
+      
+      if (authInitiated && isGoogleLoading) {
+        const initiatedTime = parseInt(authInitiated);
+        const now = Date.now();
+        
+        // 如果超過 2 秒後頁面重新獲得焦點，可能是用戶返回了
+        if (now - initiatedTime > 2000) {
+          sessionStorage.removeItem('google_auth_initiated');
+          
+          setTimeout(() => {
+            setIsGoogleLoading(false);
+          }, 500);
+        }
+      }
+    };
+
+    // 組件載入時檢查是否有遺留的 OAuth 標記
+    const checkAuthState = () => {
+      const authInitiated = sessionStorage.getItem('google_auth_initiated');
+      if (authInitiated) {
+        const initiatedTime = parseInt(authInitiated);
+        const now = Date.now();
+        
+        // 如果標記超過 5 秒，清除它並重置狀態
+        if (now - initiatedTime > 5000) {
+          sessionStorage.removeItem('google_auth_initiated');
+          setIsGoogleLoading(false);
+        }
+      }
+    };
+
+    checkAuthState();
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleWindowFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleWindowFocus);
+    };
+  }, [isGoogleLoading]);
 
   // 表單驗證
   const validateForm = () => {
@@ -241,14 +316,79 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
     }
   };
 
+  // 檢測是否為 LINE 內建瀏覽器或其他 WebView
+  const isInAppBrowser = () => {
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    
+    // 檢測 LINE 內建瀏覽器
+    if (ua.includes('Line/') || ua.includes('LIFF/')) {
+      return 'LINE';
+    }
+    
+    // 檢測 Facebook 內建瀏覽器
+    if (ua.includes('FBAN') || ua.includes('FBAV')) {
+      return 'Facebook';
+    }
+    
+    // 檢測 Instagram 內建瀏覽器
+    if (ua.includes('Instagram')) {
+      return 'Instagram';
+    }
+    
+    // 檢測 Twitter 內建瀏覽器
+    if (ua.includes('Twitter')) {
+      return 'Twitter';
+    }
+    
+    // 檢測其他常見的 WebView
+    if (ua.includes('wv') || ua.includes('WebView')) {
+      return 'WebView';
+    }
+    
+    return null;
+  };
+
+  // 複製網址到剪貼簿
+  const handleCopyUrl = async () => {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      setShowBrowserPrompt(false);
+    } catch (err) {
+      // 降級方案
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setShowBrowserPrompt(false);
+      } catch (e) {
+        alert(`請手動複製此網址：\n${url}`);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
   // 處理 Google 登入
   const handleGoogleLogin = async () => {
     try {
       setIsGoogleLoading(true);
       setMessage({ type: '', text: '' });
 
+      // 檢測內建瀏覽器
+      const inAppBrowser = isInAppBrowser();
+      if (inAppBrowser) {
+        setIsGoogleLoading(false);
+        setDetectedBrowser(inAppBrowser);
+        setShowBrowserPrompt(true);
+        return;
+      }
+
       // 呼叫後端 API 取得 Google OAuth URL
-      const response = await fetch(`${API_BASE_URL}/api/members/auth/google`, {
+      // 傳遞當前的 origin 作為 redirectTo，確保登入後返回正確的網址
+      const currentOrigin = window.location.origin; // 例如: http://localhost:3000
+      const response = await fetch(`${API_BASE_URL}/api/members/auth/google?redirectTo=${encodeURIComponent(currentOrigin)}`, {
         method: 'GET'
       });
 
@@ -258,8 +398,14 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
         // 儲存當前狀態，以便登入後返回
         sessionStorage.setItem('auth_redirect', window.location.pathname);
         
+        // 設置一個標記，表示正在進行 OAuth 重定向
+        sessionStorage.setItem('google_auth_initiated', Date.now().toString());
+        
         // 重導向到 Google 登入頁面
         window.location.href = data.data.authUrl;
+        
+        // 注意：這裡不重置 isGoogleLoading，因為頁面即將重定向
+        // 如果用戶返回，會由 visibilitychange/focus 事件處理
       } else {
         setMessage({
           type: 'error',
@@ -280,7 +426,46 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <>
+      {/* 內建瀏覽器提示 Modal */}
+      {showBrowserPrompt && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-fadeIn">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <BiError className="w-8 h-8 text-amber-600" />
+              </div>
+              
+              <h3 className="text-lg font-bold text-gray-800 mb-2">
+                無法在 {detectedBrowser} 中使用
+              </h3>
+              
+              <p className="text-sm text-gray-600 mb-6">
+                請點擊右上角或右下角的「⋯」選單<br />
+                選擇「在瀏覽器中開啟」
+              </p>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={handleCopyUrl}
+                  className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all"
+                >
+                  📋 複製網址
+                </button>
+                
+                <button
+                  onClick={() => setShowBrowserPrompt(false)}
+                  className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-all"
+                >
+                  知道了
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fadeIn">
         
         {/* 標題區 */}
@@ -307,17 +492,17 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
           
           {/* 訊息顯示 */}
           {message.text && (
-            <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
+            <div className={`mb-4 p-3 rounded-lg flex items-start gap-2 ${
               message.type === 'success' 
                 ? 'bg-green-50 text-green-700 border border-green-200'
                 : 'bg-red-50 text-red-700 border border-red-200'
             }`}>
               {message.type === 'success' ? (
-                <BiCheck className="w-5 h-5 flex-shrink-0" />
+                <BiCheck className="w-5 h-5 flex-shrink-0 mt-0.5" />
               ) : (
-                <BiError className="w-5 h-5 flex-shrink-0" />
+                <BiError className="w-5 h-5 flex-shrink-0 mt-0.5" />
               )}
-              <span className="text-sm">{message.text}</span>
+              <span className="text-sm whitespace-pre-line">{message.text}</span>
             </div>
           )}
 
@@ -346,6 +531,14 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
                   </>
                 )}
               </button>
+              
+              {/* LINE 瀏覽器提示 */}
+              {isInAppBrowser() && (
+                <p className="mt-2 text-xs text-amber-600 text-center flex items-center justify-center gap-1">
+                  <BiError className="w-4 h-4" />
+                  提示：如使用 Google 登入，請在瀏覽器中開啟
+                </p>
+              )}
             </div>
 
             {/* 分隔線 */}
@@ -543,6 +736,7 @@ const MemberAuth = ({ isOpen, onClose, onLoginSuccess }) => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

@@ -213,7 +213,6 @@ const AnalysisDetailModal = ({ record, onClose }) => {
 檢測日期: ${date}
 整體評分: ${record.overall_score} 分
 ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
-風水時辰: ${record.feng_shui_element} · ${record.feng_shui_blessing}
 
 ----------------------------------------
 個人化專屬保養方案
@@ -387,21 +386,17 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
           {activeTab === 'overview' && (
             <div className="space-y-6">
               {/* 主要評分卡片 */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 text-center">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 text-center hover:shadow-lg transition-shadow">
                   <p className="text-3xl font-bold text-purple-600">{record.overall_score || 'N/A'}</p>
                   <p className="text-sm text-gray-600 mt-1">整體評分</p>
                 </div>
                 {skinAge && (
-                  <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-4 text-center">
+                  <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-4 text-center hover:shadow-lg transition-shadow">
                     <p className="text-3xl font-bold text-indigo-600">{skinAge}</p>
                     <p className="text-sm text-gray-600 mt-1">肌膚年齡</p>
                   </div>
                 )}
-                <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-amber-600">{record.feng_shui_element || '未知'}</p>
-                  <p className="text-sm text-gray-600 mt-1">風水元素</p>
-                </div>
               </div>
 
               {/* 分析總結 */}
@@ -412,18 +407,12 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
 
                 <div className="grid md:grid-cols-3 gap-4 mb-6">
                   {/* 基礎狀態 */}
-                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border-2 border-blue-200">
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border-2 border-blue-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
                     <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                       <span className="text-xl">🌸</span>
                       基礎狀態
                     </h4>
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">膚色</span>
-                        <span className="font-semibold text-gray-800">
-                          {analysisData.skin_color !== undefined ? getSkinColorLabel(analysisData.skin_color.skin_color) : '棕調'}
-                        </span>
-                      </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600">肌膚年齡</span>
                         <span className="font-bold text-lg text-indigo-600">{skinAge || 'N/A'} 歲</span>
@@ -438,7 +427,7 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
                   </div>
 
                   {/* 老化指標 */}
-                  <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 border-2 border-orange-200">
+                  <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 border-2 border-orange-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
                     <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                       <span className="text-xl">😊</span>
                       老化指標
@@ -467,7 +456,7 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
                   </div>
 
                   {/* 瑕疵與敏感 */}
-                  <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-4 border-2 border-red-200">
+                  <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-4 border-2 border-red-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
                     <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                       <span className="text-xl">🔴</span>
                       瑕疵與敏感
@@ -510,7 +499,7 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
                 </div>
 
                 {/* 肌膚指標 (水潤度、光澤度、緊緻度) */}
-                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-5 border-2 border-purple-200">
+                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-5 border-2 border-purple-200 hover:shadow-lg transition-all duration-300">
                   <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <span className="text-xl">💎</span>
                     肌膚指標
@@ -526,7 +515,7 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
                       return (
                         <>
                           {/* 水潤度 */}
-                          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+                          <div className="bg-white rounded-lg p-3 text-center shadow-sm hover:shadow-md transition-shadow">
                             <div className="text-2xl mb-1">💧</div>
                             <div className="text-xs text-gray-600 mb-2">水潤度</div>
                             <div className={`text-2xl font-bold ${
@@ -541,7 +530,7 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
                           </div>
 
                           {/* 光澤度 */}
-                          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+                          <div className="bg-white rounded-lg p-3 text-center shadow-sm hover:shadow-md transition-shadow">
                             <div className="text-2xl mb-1">✨</div>
                             <div className="text-xs text-gray-600 mb-2">光澤度</div>
                             <div className={`text-2xl font-bold ${
@@ -556,7 +545,7 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
                           </div>
 
                           {/* 緊緻度 */}
-                          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+                          <div className="bg-white rounded-lg p-3 text-center shadow-sm hover:shadow-md transition-shadow">
                             <div className="text-2xl mb-1">🎯</div>
                             <div className="text-xs text-gray-600 mb-2">緊緻度</div>
                             <div className={`text-2xl font-bold ${
@@ -620,19 +609,6 @@ ${skinAge ? `肌膚年齡: ${skinAge} 歲\n` : ''}
                   </p>
                 </div>
               </div>
-
-              {/* 風水時辰 */}
-              {record.feng_shui_blessing && (
-                <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-5 border border-amber-200">
-                  <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
-                    🔮 風水時辰加持
-                  </h3>
-                  <p className="text-gray-700">
-                    <span className="font-bold text-amber-700">{record.feng_shui_element}</span> 元素
-                  </p>
-                  <p className="text-sm text-gray-600 mt-2 leading-relaxed">{record.feng_shui_blessing}</p>
-                </div>
-              )}
 
               {/* 檢測時間資訊 */}
               <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">

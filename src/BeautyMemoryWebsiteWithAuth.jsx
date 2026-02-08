@@ -2,7 +2,7 @@
 // 美魔力 - 整合會員系統的完整範例
 
 import React, { useState, useEffect } from 'react';
-import { BiLogOut, BiCamera, BiHistory, BiTrophy } from 'react-icons/bi';
+import { BiLogOut, BiCamera, BiHistory } from 'react-icons/bi';
 import MemberAuth from './components/MemberAuth';
 import SkinAnalysis from './components/SkinAnalysis';
 import AnalysisDetailModal from './components/AnalysisDetailModal';
@@ -29,6 +29,7 @@ function BeautyMemoryWebsiteWithAuth() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [plans, setPlans] = useState([]);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // 清理 displayName（移除括號中的重複名字）
   const cleanDisplayName = (name) => {
@@ -58,9 +59,16 @@ function BeautyMemoryWebsiteWithAuth() {
     const urlParams = new URLSearchParams(window.location.search);
     const hash = window.location.hash;
     
+    // 檢查是否有 OAuth 相關參數
+    const hasOAuthParams = urlParams.has('refreshToken') || (hash && hash.includes('access_token'));
+    if (hasOAuthParams) {
+      setIsAuthenticating(true);
+    }
+    
     // 檢查是否有 error
     const error = urlParams.get('error') || urlParams.get('error_description');
     if (error) {
+      setIsAuthenticating(false);
       alert('登入失敗：' + error);
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
@@ -95,6 +103,8 @@ function BeautyMemoryWebsiteWithAuth() {
             // 清除 URL 參數
             window.history.replaceState({}, document.title, window.location.pathname);
             
+            setIsAuthenticating(false);
+            
             // 顯示歡迎訊息
             alert(`🎉 歡迎回來，${userData.displayName || '美魔力會員'}！`);
             return; // 成功後直接返回，不繼續執行其他邏輯
@@ -105,6 +115,7 @@ function BeautyMemoryWebsiteWithAuth() {
         console.error('OAuth callback error:', error);
       }
       
+      setIsAuthenticating(false);
       // 清除 URL 參數
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
@@ -146,6 +157,8 @@ function BeautyMemoryWebsiteWithAuth() {
 
             window.history.replaceState({}, document.title, window.location.pathname);
             
+            setIsAuthenticating(false);
+            
             alert(`🎉 歡迎回來，${userData.displayName || '美魔力會員'}！`);
             return;
           }
@@ -154,6 +167,7 @@ function BeautyMemoryWebsiteWithAuth() {
         console.error('OAuth hash callback error:', error);
       }
       
+      setIsAuthenticating(false);
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
@@ -486,9 +500,11 @@ function BeautyMemoryWebsiteWithAuth() {
             
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">美</span>
-              </div>
+              <img 
+                src="/favicon-32x32.png" 
+                alt="美魔力 Logo" 
+                className="w-10 h-10"
+              />
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                   美魔力
@@ -558,16 +574,14 @@ function BeautyMemoryWebsiteWithAuth() {
             AI 智能肌膚分析
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            結合 AI專業技術 與 九紫離火運能量
-            <br />
-            為您打造專屬的 美麗記憶庫
+            結合 AI 專業技術與智能分析，為您打造專屬的美麗記憶庫
           </p>
 
           {/* 功能按鈕 */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={handleAnalysisClick}
-              disabled={isLoading}
+              disabled={isLoading || isAuthenticating}
               className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold text-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
@@ -577,6 +591,14 @@ function BeautyMemoryWebsiteWithAuth() {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
                   處理中...
+                </span>
+              ) : isAuthenticating ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  登入中...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
@@ -624,8 +646,8 @@ function BeautyMemoryWebsiteWithAuth() {
         </div>
 
         {/* 特色功能 */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          <div className="bg-white rounded-2xl p-8 shadow-lg">
+        <div className="grid md:grid-cols-2 gap-8 mb-16 max-w-4xl mx-auto">
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
             <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
               <BiCamera className="w-8 h-8 text-purple-600" />
             </div>
@@ -633,11 +655,11 @@ function BeautyMemoryWebsiteWithAuth() {
               AI 智能分析
             </h3>
             <p className="text-gray-600">
-              採用 AI 臉部分析專業技術, 27 項專業檢測
+              採用 AI 臉部分析專業技術, 27 項專業檢測，95% 醫師級準確率
             </p>
           </div>
 
-          <div className="bg-white rounded-2xl p-8 shadow-lg">
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
             <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mb-4">
               <BiHistory className="w-8 h-8 text-pink-600" />
             </div>
@@ -645,19 +667,7 @@ function BeautyMemoryWebsiteWithAuth() {
               美麗記憶庫
             </h3>
             <p className="text-gray-600">
-              完整記錄您的美麗歷程,追蹤肌膚改善趨勢,見證蛻變時刻
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-8 shadow-lg">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-              <BiTrophy className="w-8 h-8 text-red-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-3">
-              九紫離火運
-            </h3>
-            <p className="text-gray-600">
-              結合風水時辰建議,選擇最佳護膚時機,事半功倍
+              完整記錄您的美麗歷程，智能追蹤肌膚改善趨勢，見證每一次蛻變
             </p>
           </div>
         </div>
@@ -719,11 +729,11 @@ function BeautyMemoryWebsiteWithAuth() {
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-purple-500 font-bold">✓</span>
-                  <span className="font-medium">九紫離火運建議</span>
+                  <span className="font-medium">美麗記憶庫</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-purple-500 font-bold">✓</span>
-                  <span className="font-medium">美麗記憶庫</span>
+                  <span className="font-medium">專屬保養方案</span>
                 </li>
               </ul>
               <button 
@@ -775,7 +785,6 @@ function BeautyMemoryWebsiteWithAuth() {
                   const indexOfLastRecord = currentPage * recordsPerPage;
                   const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
                   const currentRecords = historyRecords.slice(indexOfFirstRecord, indexOfLastRecord);
-                  const totalPages = Math.ceil(historyRecords.length / recordsPerPage);
 
                   return currentRecords.map((record, index) => (
                   <div
@@ -800,7 +809,7 @@ function BeautyMemoryWebsiteWithAuth() {
                               )}
                             </div>
                             <p className="text-sm text-gray-500">
-                              {record.feng_shui_element} 元素 · {record.feng_shui_blessing}
+                              {/* 風水元素顯示已移除 */}
                             </p>
                           </div>
                         </div>

@@ -60,7 +60,6 @@ const MemoryCard = ({
     aiAnalysis,
     skinMetrics,
     tags,
-    fengShuiAdvice,
     improvement,
     analysisType,
     analysisData
@@ -128,10 +127,7 @@ const MemoryCard = ({
         <AIAnalysisBox analysis={aiAnalysis} />
       )}
 
-      {/* 風水建議 */}
-      {fengShuiAdvice && (
-        <FengShuiAdviceBox advice={fengShuiAdvice} />
-      )}
+      {/* 風水建議已移除 */}
 
       {/* 比較數據 */}
       {showComparison && memory.comparison && (
@@ -343,25 +339,6 @@ const AIAnalysisBox = ({ analysis }) => (
         <h4 className="font-semibold text-purple-800 mb-1">AI 深度分析</h4>
         <p className="text-sm text-purple-700 leading-relaxed">
           {analysis}
-        </p>
-      </div>
-    </div>
-  </div>
-);
-
-/**
- * 風水建議框組件
- */
-const FengShuiAdviceBox = ({ advice }) => (
-  <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-4 border border-amber-200/50 mb-3">
-    <div className="flex items-start gap-3">
-      <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
-        <span className="text-white text-sm">🔮</span>
-      </div>
-      <div className="flex-1">
-        <h4 className="font-semibold text-amber-800 mb-1">九紫離火運建議</h4>
-        <p className="text-sm text-amber-700 leading-relaxed">
-          {advice}
         </p>
       </div>
     </div>

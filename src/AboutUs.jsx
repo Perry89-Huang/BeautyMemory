@@ -1,7 +1,7 @@
 // src/AboutUs.jsx
 import React from 'react';
 import { RiMagicFill } from 'react-icons/ri';
-import { AiOutlineFire, AiOutlineMail, AiOutlinePhone, AiOutlineEnvironment } from 'react-icons/ai';
+import { AiOutlineMail } from 'react-icons/ai';
 
 const AboutUs = ({ onBack }) => {
   return (
@@ -46,45 +46,45 @@ const AboutUs = ({ onBack }) => {
           <p className="text-xl text-purple-600 font-medium mb-3">
             推廣所有與「美」相關的人事物
           </p>
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-100 to-orange-100 px-6 py-3 rounded-full border-2 border-red-200">
-            <AiOutlineFire className="w-5 h-5 text-red-600" />
-            <span className="text-red-700 font-semibold">迎接九紫離火運新時代</span>
-            <AiOutlineFire className="w-5 h-5 text-red-600" />
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 px-6 py-3 rounded-full border-2 border-purple-200">
+            <RiMagicFill className="w-5 h-5 text-purple-600" />
+            <span className="text-purple-700 font-semibold">科技與美的完美結合</span>
+            <RiMagicFill className="w-5 h-5 text-purple-600" />
           </div>
         </header>
 
-        {/* 九運說明區 */}
+        {/* 品牌理念區 */}
         <section className="bg-white rounded-2xl shadow-xl p-8 mb-8 animate-slide-up">
-          <h2 className="text-3xl font-bold text-purple-700 mb-6 pb-4 border-b-4 border-amber-300">
-            關於九紫離火運
+          <h2 className="text-3xl font-bold text-purple-700 mb-6 pb-4 border-b-4 border-purple-300">
+            關於美魔力
           </h2>
           <div className="space-y-4 text-lg text-slate-700 leading-relaxed">
             <p>
-              <strong className="text-purple-600">2025年</strong>是風水命理中具有關鍵轉折的一年。從這一年開始,三元九運將正式進入「<strong className="text-red-600">九運</strong>」時代,也就是被稱為「<strong className="text-red-600">九紫離火運</strong>」的全新二十年週期。
+              <strong className="text-purple-600">美魔力智能行銷有限公司</strong>致力於推廣所有與「美」相關的人事物，我們相信美的力量能夠帶來無限可能。
             </p>
             
             <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-6 my-6 border-l-4 border-pink-500">
               <p className="text-purple-800 font-medium text-xl">
-                在這個充滿能量與轉變的時代,美魔力相信「美」的力量將帶來無限可能。我們致力於發掘、推廣並傳遞美的價值,讓每個人都能在九運時代中綻放光彩。
+                透過先進的 AI 技術與專業的肌膚分析，我們為每位用戶提供個性化的美麗解決方案，讓科技成為您美麗旅程中最值得信賴的夥伴。
               </p>
             </div>
 
-            {/* 九運特色 */}
+            {/* 核心優勢 */}
             <div className="grid md:grid-cols-3 gap-4 mt-8">
-              <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-6 text-center border border-red-200">
-                <div className="text-3xl mb-3">🔥</div>
-                <h3 className="font-bold text-red-700 mb-2">火元素加持</h3>
-                <p className="text-sm text-red-600">提升肌膚活力與光澤</p>
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 text-center border border-purple-200 hover:shadow-lg transition-shadow">
+                <div className="text-3xl mb-3">🤖</div>
+                <h3 className="font-bold text-purple-700 mb-2">AI 智能分析</h3>
+                <p className="text-sm text-purple-600">95% 醫師級準確率</p>
               </div>
-              <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl p-6 text-center border border-amber-200">
-                <div className="text-3xl mb-3">⏰</div>
-                <h3 className="font-bold text-amber-700 mb-2">最佳時機</h3>
-                <p className="text-sm text-amber-600">把握黃金護膚時段</p>
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-6 text-center border border-blue-200 hover:shadow-lg transition-shadow">
+                <div className="text-3xl mb-3">📊</div>
+                <h3 className="font-bold text-blue-700 mb-2">專業檢測</h3>
+                <p className="text-sm text-blue-600">27 項肌膚指標分析</p>
               </div>
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 text-center border border-purple-200">
+              <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-6 text-center border border-pink-200 hover:shadow-lg transition-shadow">
                 <div className="text-3xl mb-3">💎</div>
-                <h3 className="font-bold text-purple-700 mb-2">能量共振</h3>
-                <p className="text-sm text-purple-600">與火運能量同頻共振</p>
+                <h3 className="font-bold text-pink-700 mb-2">個性化方案</h3>
+                <p className="text-sm text-pink-600">量身打造護膚計劃</p>
               </div>
             </div>
           </div>
@@ -92,7 +92,7 @@ const AboutUs = ({ onBack }) => {
 
         {/* 公司資訊區 */}
         <section className="bg-white rounded-2xl shadow-xl p-8 animate-slide-up">
-          <h2 className="text-3xl font-bold text-purple-700 mb-6 pb-4 border-b-4 border-amber-300">
+          <h2 className="text-3xl font-bold text-purple-700 mb-6 pb-4 border-b-4 border-purple-300">
             公司資訊
           </h2>
           
@@ -145,7 +145,7 @@ const AboutUs = ({ onBack }) => {
               <span>聯絡我們</span>
             </h3>
             <p className="text-purple-700 leading-relaxed">
-              如有任何疑問或合作洽詢,歡迎透過電子信箱與我們聯繫。我們將竭誠為您服務,一同在九紫離火運的新時代中,探索美的無限可能。
+              如有任何疑問或合作洽詢，歡迎透過電子信箱與我們聯繫。我們將竭誠為您服務，一同探索美的無限可能。
             </p>
           </div>
         </section>

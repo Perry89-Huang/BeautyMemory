@@ -116,7 +116,7 @@ const VerifySuccess = () => {
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-500">✓</span>
-              <span>九紫離火運風水建議</span>
+              <span>趨勢追蹤分析</span>
             </li>
           </ul>
         </div>

@@ -115,20 +115,18 @@ export const SYSTEM_FEATURES = [
     icon: <FiZap className="w-8 h-8" />,
     title: "AI 智能提醒系統",
     subtitle: "個性化護膚時程管理",
-    description: "基於您的生活節奏、肌膚週期和 2025 九紫離火運風水時機，智能提醒最佳護膚時機，讓美麗成為自然習慣。",
+    description: "基於您的生活節奏、肌膚週期，智能提醒最佳護膚時機，讓美麗成為自然習慣。",
     gradient: "from-amber-400 to-orange-400",
     details: [
       "個人化護膚時程表",
       "生理週期美容提醒",
       "環境因子護膚建議",
       "習慣養成智能助手",
-      "九紫離火運時機提醒",
       "季節性護理調整"
     ],
     features: [
       { name: "智能提醒", frequency: "多頻次" },
       { name: "個性化", level: "深度定制" },
-      { name: "風水整合", coverage: "全面" },
       { name: "習慣追蹤", accuracy: "精準" }
     ]
   }
@@ -189,14 +187,13 @@ export const ANALYSIS_STEPS = [
   {
     step: "03",
     title: "生成報告",
-    description: "獲得專業肌膚分析報告、個性化改善建議與風水時機推薦",
+    description: "獲得專業肌膚分析報告、個性化改善建議",
     icon: <AiOutlineBarChart className="w-8 h-8" />,
     action: "查看報告",
     includes: [
       "14項專業評分",
       "肌膚年齡評估",
-      "個性化建議",
-      "風水時機指導"
+      "個性化建議"
     ],
     accuracy: "95% 醫師級準確率"
   },
@@ -233,7 +230,6 @@ export const INITIAL_MEMORIES = [
       整體評分: 81
     },
     tags: ["保濕", "改善", "晨間護理"],
-    fengShuiAdvice: "水行旺盛，適合深層保濕",
     improvement: "+15%",
     analysisType: "mock"
   },
@@ -252,7 +248,6 @@ export const INITIAL_MEMORIES = [
       整體評分: 88
     },
     tags: ["抗老", "精華", "夜間護理"],
-    fengShuiAdvice: "金運旺盛，宜進行修復護理",
     improvement: "+12%",
     analysisType: "professional"
   },
@@ -271,43 +266,10 @@ export const INITIAL_MEMORIES = [
       整體評分: 88
     },
     tags: ["美白", "提亮", "日間護理"],
-    fengShuiAdvice: "火元素活躍，適合亮白護理",
     improvement: "+18%",
     analysisType: "professional"
   },
 ];
-
-// === 2025 九紫離火運配置 ===
-export const FENG_SHUI_CONFIG = {
-  theme: "九紫離火運",
-  year: 2025,
-  duration: "2024-2043",
-  elements: {
-    primary: "火",
-    secondary: "土",
-    colors: {
-      fire: "#ff4757",
-      earth: "#ffa726", 
-      metal: "#ffd700",
-      water: "#42a5f5",
-      wood: "#66bb6a"
-    }
-  },
-  bestTimes: {
-    fire: [7, 8, 9, 11, 12, 13], // 辰時、巳時、午時
-    water: [19, 20, 21, 23, 0, 1], // 戌時、亥時、子時
-    earth: [14, 15, 16, 17, 18], // 未時、申時、酉時
-    metal: [2, 3, 4, 5, 6], // 寅時、卯時、辰時
-    wood: [9, 10, 11] // 巳時、午時
-  },
-  recommendations: {
-    fire: "離火時辰，適合美白和提亮護理，能量充沛",
-    water: "水元素時辰，適合深層保濕和修復，寧靜安撫", 
-    earth: "土元素時辰，適合基礎護理和穩固保養",
-    metal: "金元素時辰，適合緊緻和抗老護理",
-    wood: "木元素時辰，適合清潔和排毒護理"
-  }
-};
 
 // === 增強版應用配置 ===
 export const APP_CONFIG = {
@@ -331,7 +293,6 @@ export const APP_CONFIG = {
     realTimeAnalysis: true,
     batchProcessing: true,
     historyTracking: true,
-    fengShuiIntegration: true,
     exportFunctionality: true,
     multiLanguage: false,
     mobileOptimized: true,
@@ -346,7 +307,7 @@ export const APP_CONFIG = {
     premium: {
       name: "專業版", 
       analyses: 50,
-      features: ["完整分析", "趨勢追蹤", "風水建議", "批量處理"]
+      features: ["完整分析", "趨勢追蹤", "批量處理"]
     },
     enterprise: {
       name: "企業版",
@@ -421,7 +382,7 @@ export const USER_LEVELS = {
     name: "美麗專家",
     icon: "👑", 
     analyses: [21, 50],
-    benefits: ["專業分析", "風水建議", "批量處理", "優先客服"]
+    benefits: ["專業分析", "批量處理", "優先客服"]
   },
   master: {
     name: "美魔力大師",
@@ -453,13 +414,6 @@ export const ACHIEVEMENTS = [
     description: "肌膚評分提升 20 分以上",
     icon: "📈",
     reward: "解鎖高級分析功能"
-  },
-  {
-    id: "feng_shui_follower",
-    name: "風水護膚家",
-    description: "按風水時機護膚 10 次",
-    icon: "🔮",
-    reward: "獲得專屬風水護膚指南"
   }
 ];
 
@@ -501,7 +455,6 @@ export default {
   SKIN_ANALYSIS_FEATURES,
   ANALYSIS_STEPS,
   INITIAL_MEMORIES,
-  FENG_SHUI_CONFIG,
   APP_CONFIG,
   SKINCARE_RECOMMENDATIONS,
   USER_LEVELS,

@@ -16,7 +16,7 @@ import perfectCorpAPI, {
   exportAnalysisResults,
   skinAnalysisHistory,
   SkinHealthAssessment,
-  FengShuiIntegration,
+  // FengShuiIntegration, // 已移除風水功能
   PerfectCorpAPIError
 } from '../services/perfectCorpAPI';
 
@@ -74,20 +74,9 @@ export const getSkinHealthAssessment = (analysisResult) => {
 };
 
 /**
- * 獲取風水建議
+ * 風水建議功能已移除
  */
-export const getFengShuiRecommendations = (analysisResult = null) => {
-  try {
-    return {
-      timing: FengShuiIntegration.getBestSkincareTime(),
-      seasonal: FengShuiIntegration.getSeasonalRecommendation(),
-      colors: analysisResult ? FengShuiIntegration.getColorRecommendation(analysisResult) : null
-    };
-  } catch (error) {
-    console.error('FengShui recommendations failed:', error);
-    return null;
-  }
-};
+// export const getFengShuiRecommendations = (analysisResult = null) => { ... };
 
 /**
  * 管理分析歷史
@@ -188,7 +177,6 @@ export const calculateBeautyTrend = (memories) => {
  */
 export const getTodaySkincareAdvice = (userProfile = {}) => {
   try {
-    const fengShui = getFengShuiRecommendations();
     const now = new Date();
     const hour = now.getHours();
     
@@ -205,8 +193,6 @@ export const getTodaySkincareAdvice = (userProfile = {}) => {
 
     return {
       timeAdvice,
-      fengShuiTiming: fengShui?.timing,
-      seasonalFocus: fengShui?.seasonal,
       recommendedProducts: getRecommendedProducts(hour, userProfile)
     };
   } catch (error) {
@@ -247,13 +233,11 @@ export const generateSmartSkincareRoutine = (analysisResults, userPreferences = 
 
     const latestResult = analysisResults[0];
     const healthAssessment = getSkinHealthAssessment(latestResult);
-    const fengShui = getFengShuiRecommendations(latestResult);
     const trend = calculateBeautyTrend(analysisResults);
 
     return {
       basic: healthAssessment?.routine || getBasicSkincareRoutine(),
       personalized: getPersonalizedRoutine(latestResult, userPreferences),
-      fengShuiOptimized: getFengShuiOptimizedRoutine(fengShui),
       trendBased: getTrendBasedAdjustments(trend),
       timeline: healthAssessment?.timeline || []
     };
@@ -299,15 +283,7 @@ const getPersonalizedRoutine = (analysisResult, preferences) => {
   return routine;
 };
 
-const getFengShuiOptimizedRoutine = (fengShui) => {
-  if (!fengShui) return {};
-  
-  return {
-    bestTime: fengShui.timing?.recommendation || '任何時間都適合基礎護理',
-    seasonalFocus: fengShui.seasonal?.recommendation || '保持均衡護理',
-    luckyColors: fengShui.colors || null
-  };
-};
+// getFengShuiOptimizedRoutine 函數已移除
 
 const getTrendBasedAdjustments = (trend) => {
   if (!trend) return {};
@@ -343,8 +319,7 @@ export const enhanceAnalysisResult = (result, previousResults = []) => {
     // 添加健康評估
     enhanced.healthAssessment = getSkinHealthAssessment(result);
     
-    // 添加風水建議
-    enhanced.fengShuiAdvice = getFengShuiRecommendations(result);
+    // 風水建議功能已移除
     
     // 添加趨勢分析
     if (previousResults.length > 0) {
